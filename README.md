@@ -14,7 +14,7 @@ The contents are:
 --Sections from my dissertation explaining in narrative form how the manipulation worked (see the first section for overview, second for gory detail).
 
 
-Not present here but also necessary for running the script are sounds and textgrids. You can access these either by emailing me for them (daniel.villarreal@canterbury.ac.nz) or via the supplementary files on my 2018 JEngL article (http://journals.sagepub.com/doi/full/10.1177/0075424217753520, https://www.academia.edu/35973393). I chose these stimuli for this demonstrate because they illustrate some of the pitfalls in the vowel manipulation process that the script is designed to circumvent:
+Not present here but also necessary for running the script are sounds and textgrids. You can access these either by emailing me for them (daniel.villarreal@canterbury.ac.nz) or via the supplementary files on my 2018 JEngL article (http://journals.sagepub.com/doi/full/10.1177/0075424217753520). The stimuli I chose for this demonstration illustrate some of the pitfalls in the vowel manipulation process that the script is designed to circumvent:
 
 --Stim5, Stim23, and Stim24 have nasty transitions between the manipulated token and a neighboring sonorant. The script automatically smooths out these transitions to make the resultant stimuli sound more natural, but you can set smoothTrans to 0 (line 37 of the main script) to see what they look like without smoothing.
 
