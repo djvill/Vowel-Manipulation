@@ -12,13 +12,15 @@
 #### timing values for the token and vowel in the csv file.) Also
 #### adds columns to the csv file with info on the manipulation.
 ####
-#### This is a lightly modified version of 1.2 for sharing.
-####
 
 stopwatch
 
 include ManipulateVowelsJNDProc.praat
 include SmoothTransitionsProc.praat
+
+if numberOfSelected("Sound") <> 1 or numberOfSelected("TextGrid") <> 1
+	exitScript: "You must select one Sound and one TextGrid to run this script.'newline$'Select one Sound and one TextGrid, and try again.'newline$'"
+endif
 
 origStim = selected("Sound")
 tg = selected("TextGrid")
@@ -26,12 +28,12 @@ soundName$ = selected$("Sound")
 tgName$ = selected$("TextGrid")
 
 beginPause: "Manipulate vowels"
-	# comment: "Something something which tier"
+	comment: "Choose the tier that has nonempty intervals denoting the vowels to be manipulated."
 	natural: "Segment tier", 1
-	comment: "An improper choice for maximum frequency and number of formants will result in weird sounds."
-	natural: "Maximum_frequency_(Hz)", 5000
-	positive: "Number_of_formants", 5
-	choice: "Manipulation_method", 1
+	comment: "Note: An improper choice for maximum frequency and number of formants will result in weird sounds."
+	natural: "Maximum frequency (Hz)", 5000
+	positive: "Number of formants", 5
+	choice: "Manipulation method", 1
 		option: "Relative (set desired increase/decrease)"
 		option: "Absolute (set desired formant target)"
 	comment: "Choose the formants to manipulate:"
@@ -40,10 +42,23 @@ beginPause: "Manipulate vowels"
 	boolean: "F3", 0
 	boolean: "F4", 0
 	boolean: "F5", 0
+	comment: "Note: It's recommended to set a small manipulation interval (e.g., one JND); to override, set to 10000."
+	positive: "Manipulation interval", 21.86
+	boolean: "Start with highest formant", 1
 	# boolean Show_intermediary_stimuli 0
 	# boolean Show_all_tokens 0
 	# sentence Filename_suffix _Cons
 endPause: "Continue", 1
+
+##Check the number of nonempty intervals on segment_tier and warn the user if it's more than a large number.
+selectObject: tg
+numManip = Count intervals where: segment_tier, "matches (regex)", ".+"
+if numManip > 100
+	beginPause: "Large number of manipulations"
+		comment: "There are 'numManip' nonempty intervals on tier 'segment_tier'."
+		comment: "This manipulation might take a while. Do you want to proceed?"
+	endPause: "Continue", 1
+endif
 
 ##Initialize manipulation values
 f1_increase = undefined
@@ -613,13 +628,14 @@ if keepTime
 	initTime = stopwatch
 endif
 
+
 selectObject: tg
 numPhones = Get number of intervals: segment_tier
 
 for phone from 1 to numPhones
 	phoneLabel$ = Get label of interval: segment_tier, phone
 	if phoneLabel$ <> ""
-		
+		####CALL MANIPULATETOKEN.PRAAT
 	endif
 endfor
 

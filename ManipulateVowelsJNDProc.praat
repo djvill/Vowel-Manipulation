@@ -1,21 +1,17 @@
 ####
-#### Praat script ManipulateVowelsJNDProc
-#### Version 1.1a
-#### Version date: December 3, 2017
+#### Praat script ManipulateToken
 #### Dan Villarreal
 ####
 #### This script hosts a function that manipulates a single token
-#### to a specified F1, F2, and/or F3 targets. It iterates formant
-#### increases by small formant steps (just noticeable differences or
-#### JNDs) specified by the user. This JND approach drastically improves
-#### accuracy of the manipulation process. It also necessitates doing
+#### by specified F1, F2, F3, F4, and/or F5 differences. It iterates formant
+#### increases by small formant steps (manipulation intervals, which work well
+#### as JNDs) specified by the user. This interval approach drastically improves
+#### accuracy of the manipulation process, relative to doing the manipulation all at once. It also necessitates doing
 #### the manipulation formant-by-formant rather than all at once.
 ####
 #### Improves upon an earlier version by iterating the manipulation
 #### of just the filter (i.e., the Formant object) rather than both 
 #### the source and the filter.
-####
-#### This is a lightly modified version of 1.2 for sharing.
 ####
 
 include ManipulateVowelsGetIngredientsProc.praat
@@ -26,27 +22,33 @@ include CloneIntensityProc.praat
 # timeStep = 0.005
 # maxIntensity = 100
 
-procedure manipulateVowels: oldToken, maxFreq, numForms, f1_increase,
-... f2_increase, f3_increase, jnd, buffer, minPitch, timeStep, maxIntensity
+procedure manipulateToken: oldToken, maxFreq, numForms, f1_increase, f2_increase, f3_increase, f4_increase, f5_increase, manipulation_interval, buffer, minPitch, timeStep, maxIntensity
 	manipCt = 1
 	token[manipCt] = oldToken
 	
 	##Iterate manipulation over each formant
-	for fmt from 1 to 3
-		manipFmt = 4 - fmt
+	for fmt from 1 to 5
+		##If starting with highest formant, iterate from F5 to F1; otherwise, F1 to F5
+		if start_with_highest_formant
+			manipFmt = 4 - fmt
+		else
+			manipFmt = fmt
+		endif
 		manipFCt = 1
 		desired_F'manipFmt' = midpointF'manipFmt' + f'manipFmt'_increase
 		
-		##Set counters that will decrease in magnitude as manipulation proceeds.
-		remainingIncr = f'manipFmt'_increase
-		if abs(remainingIncr) > 0
+		##Manipulate only if desired increase is nonzero
+		if abs(f'manipFmt'_increase) > 0
 			@getIngredients: token[manipCt], maxFreq, numForms, buffer
 			newF'manipFmt'[manipCt] = midpointF'manipFmt'
+			
+			##Track remaining increase, initialized as overall desired increase
+			remainingIncr = f'manipFmt'_increase
 			##While loop runs as long as the remaining formant increase is
-			##larger in magnitude than the JND
-			while abs(remainingIncr) >= jnd
+			##larger in magnitude than the manipulation interval (JND)
+			while abs(remainingIncr) >= manipulation_interval
 				##Determine magnitude and sign of manipulation and perform manipulation
-				manip = jnd * (remainingIncr/abs(remainingIncr))
+				manip = manipulation_interval * (remainingIncr/abs(remainingIncr))
 				selectObject: formantObj
 				Formula (frequencies): "if row = " + string$(manipFmt) + " then self + " + string$(manip) + " else self fi"
 				newObjValue = Get value at time: manipFmt, vowelMid, "Hertz", "Linear"
@@ -68,7 +70,7 @@ procedure manipulateVowels: oldToken, maxFreq, numForms, f1_increase,
 				endif
 			endwhile
 			##Once remaining formant increase is smaller in magnitude than
-			##the JND, get the rest of the way.
+			##the manipulation interval (JND), get the rest of the way.
 			selectObject: formantObj
 			Formula (frequencies): "if row = " + string$(manipFmt) + " then self + " + string$(remainingIncr) + " else self fi"
 			newObjValue = Get value at time: manipFmt, vowelMid, "Hertz", "Linear"
