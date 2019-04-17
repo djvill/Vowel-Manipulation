@@ -1,5 +1,5 @@
 ####
-#### Praat script ManipulateVowelsTGUI
+#### Praat script ManipTextgrid
 #### Dan Villarreal
 ####
 #### Reads TokenMeasurements.csv to determine how to manipulate 
@@ -12,6 +12,8 @@
 #### timing values for the token and vowel in the csv file.) Also
 #### adds columns to the csv file with info on the manipulation.
 ####
+
+##TODO: Implement timing, monitor header, save files, option to save monitor to text file, condense pause windows (perhaps formants to manipulate could be less verbose, like a single text field)
 
 stopwatch
 
@@ -603,6 +605,8 @@ elsif manipulation_method$ = "absolute"
 	endif
 endif
 
+
+
 if monitor
 	writeInfoLine: "MANIPULATION"
 	# if manipulation_method$ = "relative"
@@ -631,6 +635,7 @@ for phone from 1 to numPhones
 	selectObject: manipTG
 	phoneLabel$ = Get label of interval: segment_tier, phone
 	
+	##Manipulate if the phone label matches the manipulation label
 	if index_regex(phoneLabel$, manipulation_label$) > 0
 		tokenCt += 1
 		
@@ -706,7 +711,7 @@ for phone from 1 to numPhones
 		if stimEnd - phoneEnd > time_buffer
 			selectObject: afterToken
 		endif
-		if phoneStart > buffer
+		if phoneStart > time_buffer
 			plusObject: beforeToken
 		endif
 		plusObject: newToken
@@ -720,9 +725,64 @@ for phone from 1 to numPhones
 		endif
 		
 		##Smooth formant transitions
+		##	N.B. This makes a few assumptions, namely that all manipulated formants
+		##	at both the left and right edges need to be smoothed. This might be too
+		##	much manipulation, so take care with this.
+		if smoothing_window > 0
+			if monitor
+				appendInfo: tab$, "Smoothing transitions for: "
+			endif
+			##Assume that preceding and following max frequency and number of formants are the same as the token
+			prec_maximum_frequency = maximum_frequency
+			prec_number_of_formants = number_of_formants
+			foll_maximum_frequency = maximum_frequency
+			foll_number_of_formants = number_of_formants
+			
+			##Set time to smooth around
+			if phoneStart <= time_buffer
+				smoothTime = phoneStart - time_buffer
+			else
+				smoothTime = phoneStart
+			endif
+			
+			##Smooth formant by formant
+			for fmt from 1 to 5
+				if start_with_highest_formant
+					manipFmt = 6 - fmt
+				else
+					manipFmt = fmt
+				endif
+				
+				##If formant was set to be manipulated
+				if not (f'manipFmt'_increase = undefined and f'manipFmt'_target = undefined)
+					if monitor
+						appendInfo: "F'manipFmt' "
+					endif
+					##Smooth left-edge transition
+					@smoothTransitions: manipStim, smoothTime, smoothing_window, 2, prec_maximum_frequency, prec_number_of_formants, maximum_frequency, number_of_formants, time_buffer, minimum_pitch
+					smoothedSoundLeft = smoothedSound
+					if not keep_intermediary_stimuli
+						removeObject: manipStim
+					endif
+					
+					##Smooth right-edge transition
+					@smoothTransitions: smoothedSoundLeft, smoothTime, smoothWindow, 2, maximum_frequency, number_of_formants, foll_maximum_frequency, foll_number_of_formants, time_buffer, minimum_pitch
+					manipStim = smoothedSound
+					
+					removeObject: smoothedSoundLeft
+				endif
+			endfor
+			
+			if monitor
+				appendInfoLine: ""
+			endif
+		##if smoothing_window > 0
+		endif
+	##if index_regex(phoneLabel$, manipulation_label$) > 0
 	endif
 endfor
 
+##Get final versions of objects
 selectObject: manipStim
 finalStim = Copy: soundName$ + "_manip"
 if not keep_intermediary_stimuli
@@ -733,372 +793,3 @@ finalTG = Copy: tgName$ + "_manip"
 removeObject: manipTG
 selectObject: finalStim, finalTG
 
-##For each stimulus, for each TRAP and GOOSE token, read info from
-##table and, using preset formant targets above, manipulate tokens
-##to create a conservative guise and a California-shifted guise.
-# for i from startStim to endStim
-	#Initialize stimuli
-	# selectObject: sound[i]
-	# stimEnd = Get end time
-	# stimCons = sound[i]
-	# stimCali = sound[i]
-	# selectObject: tg[i]
-	# tgNew = Copy: stimName$[i]
-	# tokenCt = 0
-	# adjustStart = 0
-	
-	#Set minimum pitch based on gender
-	# selectObject: table
-	# gender$ = Get value: startRow[i], "Gender"
-	# if gender$ = "F"
-		# minPitch = 100
-	# else
-		# minPitch = 75
-	# endif
-	
-	#Print header line, if the user chooses
-	# if monitor
-		# appendInfoLine: stimName$[i]
-		# appendInfoLine: "Token", tab$, "Word", tab$, tab$, "origF2", tab$, "consTar", tab$, "consF2", tab$, "consOff", tab$, "caliTar", tab$, "caliF2", tab$, "caliOff"
-	# endif
-	
-	#Manipulate each token in stimulus i
-	# for tkn from startRow[i] to endRow[i]
-		#Do not modify TRAP-N tokens
-		# selectObject: table
-		# feature$ = Get value: tkn, "Feature"
-		# if feature$ = "TRAP" or feature$ = "GOOSE"
-			#PRELIMINARIES
-			#Increment token count
-			# tokenCt += 1
-			
-			#Get appropriate JND
-			# jnd = jnd_'feature$'
-			
-			#Get values from Table
-			# word$ = Get value: tkn, "Word"
-			# tokenStart = Get value: tkn, "TokenStart"
-			# tokenEnd = Get value: tkn, "TokenEnd"
-			# vowelStart = Get value: tkn, "VowelStart"
-			# vowelEnd = Get value: tkn, "VowelEnd"
-			# maxFreq = Get value: tkn, "MaxFrequency"
-			# numForms = Get value: tkn, "NumFormants"
-			# midpointF1 = Get value: tkn, "F1_mid"
-			# midpointF2 = Get value: tkn, "F2_mid"
-			# midpointF3 = Get value: tkn, "F3_mid"
-			
-			#Adjust timings if necessary (i.e., if the first token included a buffer
-			#that needed to be cut out)
-			# if adjustStart
-				# tokenStart -= buffer
-				# tokenEnd -= buffer
-				# vowelStart -= buffer
-				# vowelEnd -= buffer
-			# endif
-			# vowelMid = (vowelEnd-vowelStart)/2 + vowelStart
-			
-			#Read formant targets from table
-			# selectObject: table
-			# for fmt from 1 to 3
-				# targetF'fmt' = Get column index: f'fmt'ConsTargetCol$
-				# incrF'fmt' = Get column index: "F'fmt'IncrCons"
-				# if targetF'fmt' > 0
-					# desired_F'fmt'Cons = Get value: tkn, f'fmt'ConsTargetCol$
-					# desired_F'fmt'Cali = Get value: tkn, f'fmt'CaliTargetCol$
-					# f'fmt'_increaseCons = desired_F'fmt'Cons - midpointF'fmt'
-					# f'fmt'_increaseCali = desired_F'fmt'Cali - midpointF'fmt'
-				# elsif incrF'fmt' > 0
-					# f'fmt'_increaseCons = Get value: tkn, "F'fmt'IncrCons"
-					# f'fmt'_increaseCali = Get value: tkn, "F'fmt'IncrCali"
-				# else
-					# f'fmt'_increaseCons = 0
-					# f'fmt'_increaseCali = 0
-				# endif
-			# endfor
-			
-			#If smoothing, get info on transition issues
-			# if smoothTrans
-				# problemPrecCons$ = Get value: tkn, "ConsPrecedingTrans"
-				# problemFollCons$ = Get value: tkn, "ConsFollowingTrans"
-				# problemPrecCali$ = Get value: tkn, "CaliPrecedingTrans"
-				# problemFollCali$ = Get value: tkn, "CaliFollowingTrans"
-			# endif
-			
-			#MANIPULATION
-			#Extract part of Sound before token and set start/end
-			# if tokenStart <= buffer
-				# adjustStart = 1
-				# start = 0
-				# stimEnd -= buffer
-				# selectObject: tgNew
-				# tgNewer = Extract part: buffer, stimEnd, "no"
-				# removeObject: tgNew
-				# tgNew = tgNewer
-			# else
-				# selectObject: stimCons
-				# beforeTokenCons = Extract part: 0, tokenStart, "rectangular", 1.0, "yes"
-				# Rename: stimName$[i] + "_Cons_beforeToken'tokenCt'"
-				# selectObject: stimCali
-				# beforeTokenCali = Extract part: 0, tokenStart, "rectangular", 1.0, "yes"
-				# Rename: stimName$[i] + "_Cali_beforeToken'tokenCt'"
-				# start = tokenStart - buffer
-			# endif
-			
-			#Trim buffer from end of TextGrid, if necessary
-			# if stimEnd - tokenEnd <= buffer
-				# end = stimEnd
-				# selectObject: tgNew
-				# tgNewer = Extract part: 0, stimEnd - buffer, "no"
-				# removeObject: tgNew
-				# tgNew = tgNewer
-			# else
-				# end = tokenEnd + buffer
-			# endif
-			
-			#Extract token plus buffer
-			# selectObject: stimCons
-			# oldToken = Extract part: start, end, "rectangular", 1.0, "yes"
-			# Rename: stimName$[i] + "_oldToken'tokenCt'"
-			
-			#Call ManipulateVowels procedure for conservative
-			#target, trim buffer, scale intensity, and rename
-			# @manipulateVowels: oldToken, maxFreq, numForms, f1_increaseCons, f2_increaseCons, f3_increaseCons, jnd, buffer, minPitch, timeStep, maxIntensity
-			# selectObject: token[manipCt]
-			# newTokenCons = Extract part: start + buffer, end - buffer, "rectangular", 1.0, "yes"
-			# Scale intensity: loudnessNarrow
-			# Rename: stimName$[i] + "_Cons_token'tokenCt'"
-			
-			#Remove token with buffer, unless it's the original token
-			#(i.e., there was no manipulation)
-			# if oldToken <> token[manipCt]
-				# removeObject: token[manipCt]
-			# endif
-			
-			#Add info on conservative token to table
-			# selectObject: table
-			# Set numeric value: tkn, "ManipCountCons", manipCt
-			# Set numeric value: tkn, "NewF1Cons", newF1
-			# Set numeric value: tkn, "NewF2Cons", newF2
-			# Set numeric value: tkn, "NewF3Cons", newF3
-			# newF2Cons = newF2
-			# offF2Cons = newF2Cons - desired_F2Cons
-			
-			#Call ManipulateVowels procedure for Californian target,
-			#trim buffer, scale intensity, and rename
-			# @manipulateVowels: oldToken, maxFreq, numForms, f1_increaseCali, f2_increaseCali, f3_increaseCali, jnd, buffer, minPitch, timeStep, maxIntensity
-			# selectObject: token[manipCt]
-			# newTokenCali = Extract part: start + buffer, end - buffer, "rectangular", 1.0, "yes"
-			# Scale intensity: loudnessNarrow
-			# Rename: stimName$[i] + "_Cali_token'tokenCt'"
-			
-			#Remove token with buffer, unless it's the original token
-			#(i.e., there was no manipulation)
-			# if oldToken <> token[manipCt]
-				# removeObject: token[manipCt]
-			# endif
-			
-			#Add info on Californian token to table
-			# selectObject: table
-			# Set numeric value: tkn, "ManipCountCali", manipCt
-			# Set numeric value: tkn, "NewF1Cali", newF1
-			# Set numeric value: tkn, "NewF2Cali", newF2
-			# Set numeric value: tkn, "NewF3Cali", newF3
-			# newF2Cali = newF2
-			# offF2Cali = newF2Cali - desired_F2Cali
-			
-			#PUTTING STIMULUS BACK TOGETHER
-			#Extract afterTokens and add manipulated conservative
-			#token back into stimulus
-			# if stimEnd - tokenEnd > buffer
-				# selectObject: stimCons
-				# afterTokenCons = Extract part: tokenEnd, stimEnd, "rectangular", 1.0, "yes"
-				# Rename: stimName$[i] + "_Cons_afterToken'tokenCt'"
-				# selectObject: stimCali
-				# afterTokenCali = Extract part: tokenEnd, stimEnd, "rectangular", 1.0, "yes"
-				# Rename: stimName$[i] + "_Cali_afterToken'tokenCt'"
-				# selectObject: afterTokenCons
-			# endif
-			# if tokenStart > buffer
-				# plusObject: beforeTokenCons
-			# endif
-			# plusObject: newTokenCons
-			# newStimCons = Concatenate
-			# Rename: stimName$[i] + "_Cons_'tokenCt'"
-			
-			#If a transition issue is identified in the data table,
-			#run the smoothTransitions procedure on conservative
-			#stimulus
-			# if smoothTrans
-				# if problemPrecCons$ = "Bad"
-					#Get info from table and adjust timing if needed
-					# selectObject: table
-					# precNyquist = Get value: tkn, "PrecNyquist"
-					# precFormants = Get value: tkn, "PrecFormants"
-					# if tokenStart <= buffer
-						# smoothTime = tokenStart - buffer
-					# else
-						# smoothTime = tokenStart
-					# endif
-					
-					#Run smoothTransitions procedure and replace
-					#old stimulus with smoothed stimulus
-					# @smoothTransitions: newStimCons, smoothTime, smoothWindow, 2, precNyquist, precFormants, maxFreq, numForms, buffer, minPitch
-					# removeObject: newStimCons
-					# newStimCons = newSound
-				# endif
-				# if problemFollCons$ = "Bad"
-					#Get info from table and adjust timing if needed
-					# selectObject: table
-					# follNyquist = Get value: tkn, "FollNyquist"
-					# follFormants = Get value: tkn, "FollFormants"
-					# if tokenStart <= buffer
-						# smoothTime = tokenEnd - buffer
-					# else
-						# smoothTime = tokenEnd
-					# endif
-					
-					#Run smoothTransitions procedure and replace
-					#old stimulus with smoothed stimulus
-					# @smoothTransitions: newStimCons, smoothTime, smoothWindow, 2, maxFreq, numForms, follNyquist, follFormants, buffer, minPitch
-					# removeObject: newStimCons
-					# newStimCons = newSound
-				# endif
-			# endif
-			
-			#Add manipulated Californian token back into stimulus
-			# if stimEnd - tokenEnd > buffer
-				# selectObject: afterTokenCali
-			# endif
-			# if tokenStart > buffer
-				# plusObject: beforeTokenCali
-			# endif
-			# plusObject: newTokenCali
-			# newStimCali = Concatenate
-			# Rename: stimName$[i] + "_Cali_'tokenCt'"
-			
-			#If a transition issue is identified in the data table,
-			#run the smoothTransitions procedure on Californian
-			#stimulus
-			# if smoothTrans
-				# if problemPrecCali$ = "Bad"
-					#Get info from table and adjust timing if needed
-					# selectObject: table
-					# precNyquist = Get value: tkn, "PrecNyquist"
-					# precFormants = Get value: tkn, "PrecFormants"
-					# if tokenStart <= buffer
-						# smoothTime = tokenStart - buffer
-					# else
-						# smoothTime = tokenStart
-					# endif
-					
-					#Run smoothTransitions procedure and replace
-					#old stimulus with smoothed stimulus
-					# @smoothTransitions: newStimCali, smoothTime, smoothWindow, 2, precNyquist, precFormants, maxFreq, numForms, buffer, minPitch
-					# removeObject: newStimCali
-					# newStimCali = newSound
-				# endif
-				# if problemFollCali$ = "Bad"
-					#Get info from table and adjust timing if needed
-					# selectObject: table
-					# follNyquist = Get value: tkn, "FollNyquist"
-					# follFormants = Get value: tkn, "FollFormants"
-					# if tokenStart <= buffer
-						# smoothTime = tokenEnd - buffer
-					# else
-						# smoothTime = tokenEnd
-					# endif
-					
-					#Run smoothTransitions procedure and replace
-					#old stimulus with smoothed stimulus
-					# @smoothTransitions: newStimCali, smoothTime, smoothWindow, 2, maxFreq, numForms, follNyquist, follFormants, buffer, minPitch
-					# removeObject: newStimCali
-					# newStimCali = newSound
-				# endif
-			# endif
-			
-			#FINAL BITS
-			#Clean up beforeToken and afterToken objects
-			# if stimEnd - tokenEnd > buffer
-				# removeObject: afterTokenCons, afterTokenCali
-			# endif
-			# if tokenStart > buffer
-				# removeObject: beforeTokenCons, beforeTokenCali
-			# endif
-			#Clean up created objects
-			# if not keep_all_tokens_in_objects
-				# removeObject: oldToken, newTokenCons, newTokenCali
-			# endif
-			# if not (keep_intermediary_stimuli or tokenCt = 1)
-				# removeObject: stimCons, stimCali
-			# endif
-			
-			#Reassign stimulus labels
-			# stimCons = newStimCons
-			# stimCali = newStimCali
-			
-			#Print info on tokens, if the user chooses
-			# if monitor
-				# if length(word$) < 8
-					# wordtab$ = word$ + tab$ + tab$
-				# else
-					# wordtab$ = word$ + tab$
-				# endif
-				# appendInfoLine: "'tokenCt'", tab$, wordtab$, "'midpointF2:0'", tab$, "'desired_F2Cons:0'", tab$, "'newF2Cons:0'", tab$, "'offF2Cons:0'", tab$, "'desired_F2Cali:0'", tab$, "'newF2Cali:0'", tab$, "'offF2Cali:0'"
-			# endif
-		# endif
-	# endfor
-	
-	#Scale intensity to final
-	# selectObject: stimCons, stimCali
-	# Scale intensity: finalIntensity
-	
-	#Copy original files so they're all in one place
-	# selectObject: sound[i]
-	# soundNew[i] = Copy: stimName$[i]
-	# removeObject: sound[i]
-	# selectObject: tg[i]
-	# tgCopy[i] = Copy: stimName$[i]
-	# removeObject: tg[i]
-	# selectObject: stimCons
-	# stimConsNew[i] = Copy: stimName$[i] + "_Cons"
-	# removeObject: stimCons
-	# selectObject: tgNew
-	# tgCons[i] = Copy: stimName$[i] + "_Cons"
-	# selectObject: stimCali
-	# stimCaliNew[i] = Copy: stimName$[i] + "_Cali"
-	# removeObject: stimCali
-	# selectObject: tgNew
-	# tgCali[i] = Copy: stimName$[i] + "_Cali"
-	# removeObject: tgNew
-	
-	# if keepTime
-		# stopTime[i] = stopwatch
-	# endif
-# endfor
-
-##Save stimuli
-# if save
-	# for i from startStim to endStim
-		# selectObject: stimConsNew[i]
-		# Save as WAV file: dirName$ + manipDirName$ + stimName$[i] + "_Cons.wav"
-		# selectObject: tgCons[i]
-		# Save as text file: dirName$ + manipDirName$ + stimName$[i] + "_Cons.TextGrid"
-		# selectObject: stimCaliNew[i]
-		# Save as WAV file: dirName$ + manipDirName$ + stimName$[i] + "_Cali.wav"
-		# selectObject: tgCali[i]
-		# Save as text file: dirName$ + manipDirName$ + stimName$[i] + "_Cali.TextGrid"
-	# endfor
-# endif
-
-#If the user desires, print info on time.
-# if keepTime
-	# appendInfoLine: newline$, "Initialization time: 'initTime:3' sec"
-	# totalTime = initTime
-	# for i from startStim to endStim
-		# totalTime += stopTime[i]
-		# appendInfoLine: "Stimulus 'i' time: ", fixed$(stopTime[i],3), " sec"
-	# endfor
-	# appendInfoLine: "Total time: 'totalTime:3' sec"
-	# perStimTime = (totalTime-initTime)/(endStim-startStim+1)
-	# appendInfoLine: "Time per stimulus: 'perStimTime:3' sec"
-# endif

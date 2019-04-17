@@ -74,8 +74,12 @@ procedure smoothTransitions: sound, time, smoothWindow, smoothFormant, maxFreq1,
 	if (maxFreq1 <> maxFreq2) or (numFormants1 <> numFormants2)
 		plusObject: finalToken2
 	endif
-	newSound = Concatenate
-	Rename: soundName$ + "_smoothedF'smoothFormant'"
+	smoothedSound = Concatenate
+	if index_regex(soundName$, "smoothedF[1-5]+$") = 0
+		Rename: soundName$ + "_smoothedF'smoothFormant'"
+	else
+		Rename: soundName$ + string$(smoothFormant)
+	endif
 	
 	##Clean up created objects
 	removeObject: beforeToken, finalToken1, afterToken
@@ -84,13 +88,13 @@ procedure smoothTransitions: sound, time, smoothWindow, smoothFormant, maxFreq1,
 	endif
 endproc
 
-procedure smoothMeasure: start, end, nyquist, numFormants, smoothFormant, buffer, count
+procedure smoothMeasure: start, end, maxFreq, numFormants, smoothFormant, buffer, count
 	##Extract token for manipulation
 	selectObject: sound
 	token'count' = Extract part: start - buffer, end + buffer, "rectangular", 1.0, "yes"
 	Rename: "token'count'"
 	##Get manipulation ingredients
-	@getIngredients: token'count', nyquist, numFormants, buffer
+	@getIngredients: token'count', maxFreq, numFormants, buffer
 	removeObject: lowFreq, lpc, loudnessTokenNarrow, loudnessTokenLow
 	highFreq'count' = highFreq
 	selectObject: highFreq'count'
