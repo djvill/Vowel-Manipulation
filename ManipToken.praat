@@ -22,7 +22,7 @@ include CloneIntensityProc.praat
 # timeStep = 0.005
 # maxIntensity = 100
 
-procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1_manip, f2_manip, f3_manip, f4_manip, f5_manip, start_with_highest_formant, manipulation_interval, buffer, minPitch, timeStep, maxIntensity, print_information_on_tokens$
+procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1_manip, f2_manip, f3_manip, f4_manip, f5_manip, start_with_highest_formant, measPoint, manipulation_interval, buffer, minPitch, timeStep, maxIntensity, print_information_on_tokens$
 	manipType$ = replace_regex$(manipType$, "(.)", "\l\1", 0)
 	if not (manipType$ = "absolute" or manipType$ = "abs" or manipType$ = "relative" or manipType$ = "rel") 
 		exitScript: "Invalid manipType$ value. Must be 'abs[olute]' or 'rel[ative]'."
@@ -48,10 +48,10 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1_manip, f2
 		if not f'manipFmt'_manip = undefined
 			manipCtFmt[manipFmt] = 1
 			
-			##Get midpoints
-			@getIngredients: token[manipCt], maxFreq, numForms, buffer
+			##Get measurement points
+			@getIngredients: token[manipCt], maxFreq, numForms, buffer, measPoint
 			selectObject: formantObj
-			origF'manipFmt' = Get value at time: manipFmt, vowelMid, "Hertz", "Linear"
+			origF'manipFmt' = Get value at time: manipFmt, vowelMeasPoint, "Hertz", "Linear"
 			
 			if manipType$ = "absolute" or manipType$ = "abs"
 				desired_F'manipFmt' = f'manipFmt'_manip
@@ -74,7 +74,7 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1_manip, f2
 				manip = manipulation_interval * (remainingIncr/abs(remainingIncr))
 				selectObject: formantObj
 				Formula (frequencies): "if row = " + string$(manipFmt) + " then self + " + string$(manip) + " else self fi"
-				newObjValue = Get value at time: manipFmt, vowelMid, "Hertz", "Linear"
+				newObjValue = Get value at time: manipFmt, vowelMeasPoint, "Hertz", "Linear"
 				selectObject: source, formantObj
 				manipCt += 1
 				manipCtFmt[manipFmt] += 1
@@ -86,7 +86,7 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1_manip, f2
 				##Determine remaining formant increase.
 				selectObject: token[manipCt]
 				formant = To Formant (burg): 0, numForms, maxFreq, 0.025, 50
-				newF'manipFmt'[manipCt] = Get value at time: manipFmt, vowelMid, "Hertz", "Linear"
+				newF'manipFmt'[manipCt] = Get value at time: manipFmt, vowelMeasPoint, "Hertz", "Linear"
 				remainingIncr = desired_F'manipFmt' - newF'manipFmt'[manipCt]
 				removeObject: formant, sourceFilter
 				if token[manipCt-1] <> oldToken
@@ -101,7 +101,7 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1_manip, f2
 			endif
 			selectObject: formantObj
 			Formula (frequencies): "if row = " + string$(manipFmt) + " then self + " + string$(remainingIncr) + " else self fi"
-			newObjValue = Get value at time: manipFmt, vowelMid, "Hertz", "Linear"
+			newObjValue = Get value at time: manipFmt, vowelMeasPoint, "Hertz", "Linear"
 			selectObject: source, formantObj
 			sourceFilter = Filter
 			Rename: "sourceFilter"
@@ -112,7 +112,7 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1_manip, f2
 			manipCtFmt[manipFmt] += 1
 			selectObject: newToken
 			formant = To Formant (burg): 0, numForms, maxFreq, 0.025, 50
-			newF'manipFmt'[manipCt] = Get value at time: manipFmt, vowelMid, "Hertz", "Linear"
+			newF'manipFmt'[manipCt] = Get value at time: manipFmt, vowelMeasPoint, "Hertz", "Linear"
 			##In case the latest version of the vowel is actually further off-target
 			##than the previous version, discard the latest version in favor of the
 			##penultimate version.
@@ -158,11 +158,11 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1_manip, f2
 	##Measure output tokens
 	selectObject: token[manipCt]
 	newFormantObj = To Formant (burg): 0, numForms, maxFreq, 0.025, 50
-	newF1 = Get value at time: 1, vowelMid, "Hertz", "Linear"
-	newF2 = Get value at time: 2, vowelMid, "Hertz", "Linear"
-	newF3 = Get value at time: 3, vowelMid, "Hertz", "Linear"
-	newF4 = Get value at time: 4, vowelMid, "Hertz", "Linear"
-	newF5 = Get value at time: 5, vowelMid, "Hertz", "Linear"
+	newF1 = Get value at time: 1, vowelMeasPoint, "Hertz", "Linear"
+	newF2 = Get value at time: 2, vowelMeasPoint, "Hertz", "Linear"
+	newF3 = Get value at time: 3, vowelMeasPoint, "Hertz", "Linear"
+	newF4 = Get value at time: 4, vowelMeasPoint, "Hertz", "Linear"
+	newF5 = Get value at time: 5, vowelMeasPoint, "Hertz", "Linear"
 	
 	##Print monitor details on final manip
 	if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"

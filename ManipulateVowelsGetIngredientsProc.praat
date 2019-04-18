@@ -12,11 +12,11 @@
 #### This is a lightly modified version of 1.0 for sharing.
 ####
 
-procedure getIngredients: tokenID, maxFreq, numForms, buffer
+procedure getIngredients: tokenID, maxFreq, numForms, buffer, measPoint
 	selectObject: tokenID
 	.start = Get start time
 	.end = Get end time
-	vowelMid = (.end - .start)/2 + .start
+	vowelMeasPoint = .start + measPoint * (.end - .start)
 	##Determine sampling frequency of original token
 	sampFreq = Get sampling frequency
 	##Get the high-frequency portion of the signal

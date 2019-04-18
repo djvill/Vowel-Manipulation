@@ -94,7 +94,7 @@ procedure smoothMeasure: start, end, maxFreq, numFormants, smoothFormant, buffer
 	token'count' = Extract part: start - buffer, end + buffer, "rectangular", 1.0, "yes"
 	Rename: "token'count'"
 	##Get manipulation ingredients
-	@getIngredients: token'count', maxFreq, numFormants, buffer
+	@getIngredients: token'count', maxFreq, numFormants, buffer, 0.5
 	removeObject: lowFreq, lpc, loudnessTokenNarrow, loudnessTokenLow
 	highFreq'count' = highFreq
 	selectObject: highFreq'count'

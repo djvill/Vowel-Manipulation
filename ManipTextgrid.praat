@@ -57,6 +57,8 @@ manipulation_method$ = replace_regex$(manipulation_method$, "^([A-Za-z]+) .*", "
 manipulation_method$ = replace_regex$(manipulation_method$, "(.)", "\l\1", 0)
 
 ##Advanced settings: default values
+##measurement_point: At what point in the time-course of the token should measurements be taken?
+measurement_point = 0.5
 ##time_buffer: How much time to extract before/after tokens?
 time_buffer = 0.05
 ##smoothing_window: Size of window to perform formant smoothing over (0 for no smoothing)
@@ -84,6 +86,7 @@ save = 0
 ##Advanced settings: user-set values
 if clicked = 2
 	beginPause: "Advanced settings"
+		positive: "Measurement point (in range (0,1))", 0.5
 		positive: "Time buffer", 0.05
 		positive: "Output intensity", 65
 		comment: "Time step for intensity cloning (0 for no cloning)"
@@ -104,6 +107,17 @@ if clicked = 2
 endif
 print_information_on_tokens$ = replace_regex$(print_information_on_tokens$, "^([A-Za-z]+) .*", "\1", 0)
 print_information_on_tokens$ = replace_regex$(print_information_on_tokens$, "(.)", "\l\1", 0)
+##Handle measurement_point
+if measurement_point <= 0 or measurement_point >= 1
+	exitScript: "Invalid manipulation point. Must be greater than 0 and less than 1"
+endif
+##This range of non-recommended points could change, depending on what testing turns up
+if measurement_point <= 0.2 or measurement_point >= 0.8
+	beginPause: "Peripheral manipulation point"
+		comment: "You entered a manipulation point of 'measurement_point'."
+		comment: "Peripheral manipulation points are not recommended. Are you sure you want to proceed?"
+	endPause: "Yes", 1
+endif
 
 ##Check the number of nonempty intervals on segment_tier and warn the user if it's more than a large number.
 selectObject: origTG
@@ -111,7 +125,7 @@ numManipTokens = Count intervals where: segment_tier, "matches (regex)", manipul
 if numManipTokens > 100
 	beginPause: "Large number of manipulations"
 		comment: "There are 'numManip' nonempty intervals on tier 'segment_tier'."
-		comment: "This manipulation might take a while. Do you want to proceed?"
+		comment: "This manipulation might take a while. Are you sure you want to proceed?"
 	endPause: "Yes", 1
 endif
 
@@ -366,33 +380,33 @@ elsif manipulation_method$ = "absolute"
 				if f4
 					if f5
 						beginPause: "Manipulate formants"
-							positive: "F1 target", 1000
-							positive: "F2 target", 2000
-							positive: "F3 target", 3000
-							positive: "F4 target", 4000
-							positive: "F5 target", 5000
+							positive: "F1 target", 500
+							positive: "F2 target", 1500
+							positive: "F3 target", 2500
+							positive: "F4 target", 3500
+							positive: "F5 target", 4500
 						endPause: "Continue", 1
 					elsif not f5
 						beginPause: "Manipulate formants"
-							positive: "F1 target", 1000
-							positive: "F2 target", 2000
-							positive: "F3 target", 3000
-							positive: "F4 target", 4000
+							positive: "F1 target", 500
+							positive: "F2 target", 1500
+							positive: "F3 target", 2500
+							positive: "F4 target", 3500
 						endPause: "Continue", 1
 					endif
 				elsif not f4
 					if f5
 						beginPause: "Manipulate formants"
-							positive: "F1 target", 1000
-							positive: "F2 target", 2000
-							positive: "F3 target", 3000
-							positive: "F5 target", 5000
+							positive: "F1 target", 500
+							positive: "F2 target", 1500
+							positive: "F3 target", 2500
+							positive: "F5 target", 4500
 						endPause: "Continue", 1
 					elsif not f5
 						beginPause: "Manipulate formants"
-							positive: "F1 target", 1000
-							positive: "F2 target", 2000
-							positive: "F3 target", 3000
+							positive: "F1 target", 500
+							positive: "F2 target", 1500
+							positive: "F3 target", 2500
 						endPause: "Continue", 1
 					endif
 				endif
@@ -400,29 +414,29 @@ elsif manipulation_method$ = "absolute"
 				if f4
 					if f5
 						beginPause: "Manipulate formants"
-							positive: "F1 target", 1000
-							positive: "F2 target", 2000
-							positive: "F4 target", 4000
-							positive: "F5 target", 5000
+							positive: "F1 target", 500
+							positive: "F2 target", 1500
+							positive: "F4 target", 3500
+							positive: "F5 target", 4500
 						endPause: "Continue", 1
 					elsif not f5
 						beginPause: "Manipulate formants"
-							positive: "F1 target", 1000
-							positive: "F2 target", 2000
-							positive: "F4 target", 4000
+							positive: "F1 target", 500
+							positive: "F2 target", 1500
+							positive: "F4 target", 3500
 						endPause: "Continue", 1
 					endif
 				elsif not f4
 					if f5
 						beginPause: "Manipulate formants"
-							positive: "F1 target", 1000
-							positive: "F2 target", 2000
-							positive: "F5 target", 5000
+							positive: "F1 target", 500
+							positive: "F2 target", 1500
+							positive: "F5 target", 4500
 						endPause: "Continue", 1
 					elsif not f5
 						beginPause: "Manipulate formants"
-							positive: "F1 target", 1000
-							positive: "F2 target", 2000
+							positive: "F1 target", 500
+							positive: "F2 target", 1500
 						endPause: "Continue", 1
 					endif
 				endif
@@ -432,29 +446,29 @@ elsif manipulation_method$ = "absolute"
 				if f4
 					if f5
 						beginPause: "Manipulate formants"
-							positive: "F1 target", 1000
-							positive: "F3 target", 3000
-							positive: "F4 target", 4000
-							positive: "F5 target", 5000
+							positive: "F1 target", 500
+							positive: "F3 target", 2500
+							positive: "F4 target", 3500
+							positive: "F5 target", 4500
 						endPause: "Continue", 1
 					elsif not f5
 						beginPause: "Manipulate formants"
-							positive: "F1 target", 1000
-							positive: "F3 target", 3000
-							positive: "F4 target", 4000
+							positive: "F1 target", 500
+							positive: "F3 target", 2500
+							positive: "F4 target", 3500
 						endPause: "Continue", 1
 					endif
 				elsif not f4
 					if f5
 						beginPause: "Manipulate formants"
-							positive: "F1 target", 1000
-							positive: "F3 target", 3000
-							positive: "F5 target", 5000
+							positive: "F1 target", 500
+							positive: "F3 target", 2500
+							positive: "F5 target", 4500
 						endPause: "Continue", 1
 					elsif not f5
 						beginPause: "Manipulate formants"
-							positive: "F1 target", 1000
-							positive: "F3 target", 3000
+							positive: "F1 target", 500
+							positive: "F3 target", 2500
 						endPause: "Continue", 1
 					endif
 				endif
@@ -462,25 +476,25 @@ elsif manipulation_method$ = "absolute"
 				if f4
 					if f5
 						beginPause: "Manipulate formants"
-							positive: "F1 target", 1000
-							positive: "F4 target", 4000
-							positive: "F5 target", 5000
+							positive: "F1 target", 500
+							positive: "F4 target", 3500
+							positive: "F5 target", 4500
 						endPause: "Continue", 1
 					elsif not f5
 						beginPause: "Manipulate formants"
-							positive: "F1 target", 1000
-							positive: "F4 target", 4000
+							positive: "F1 target", 500
+							positive: "F4 target", 3500
 						endPause: "Continue", 1
 					endif
 				elsif not f4
 					if f5
 						beginPause: "Manipulate formants"
-							positive: "F1 target", 1000
-							positive: "F5 target", 5000
+							positive: "F1 target", 500
+							positive: "F5 target", 4500
 						endPause: "Continue", 1
 					elsif not f5
 						beginPause: "Manipulate formants"
-							positive: "F1 target", 1000
+							positive: "F1 target", 500
 						endPause: "Continue", 1
 					endif
 				endif
@@ -492,29 +506,29 @@ elsif manipulation_method$ = "absolute"
 				if f4
 					if f5
 						beginPause: "Manipulate formants"
-							positive: "F2 target", 2000
-							positive: "F3 target", 3000
-							positive: "F4 target", 4000
-							positive: "F5 target", 5000
+							positive: "F2 target", 1500
+							positive: "F3 target", 2500
+							positive: "F4 target", 3500
+							positive: "F5 target", 4500
 						endPause: "Continue", 1
 					elsif not f5
 						beginPause: "Manipulate formants"
-							positive: "F2 target", 2000
-							positive: "F3 target", 3000
-							positive: "F4 target", 4000
+							positive: "F2 target", 1500
+							positive: "F3 target", 2500
+							positive: "F4 target", 3500
 						endPause: "Continue", 1
 					endif
 				elsif not f4
 					if f5
 						beginPause: "Manipulate formants"
-							positive: "F2 target", 2000
-							positive: "F3 target", 3000
-							positive: "F5 target", 5000
+							positive: "F2 target", 1500
+							positive: "F3 target", 2500
+							positive: "F5 target", 4500
 						endPause: "Continue", 1
 					elsif not f5
 						beginPause: "Manipulate formants"
-							positive: "F2 target", 2000
-							positive: "F3 target", 3000
+							positive: "F2 target", 1500
+							positive: "F3 target", 2500
 						endPause: "Continue", 1
 					endif
 				endif
@@ -522,25 +536,25 @@ elsif manipulation_method$ = "absolute"
 				if f4
 					if f5
 						beginPause: "Manipulate formants"
-							positive: "F2 target", 2000
-							positive: "F4 target", 4000
-							positive: "F5 target", 5000
+							positive: "F2 target", 1500
+							positive: "F4 target", 3500
+							positive: "F5 target", 4500
 						endPause: "Continue", 1
 					elsif not f5
 						beginPause: "Manipulate formants"
-							positive: "F2 target", 2000
-							positive: "F4 target", 4000
+							positive: "F2 target", 1500
+							positive: "F4 target", 3500
 						endPause: "Continue", 1
 					endif
 				elsif not f4
 					if f5
 						beginPause: "Manipulate formants"
-							positive: "F2 target", 2000
-							positive: "F5 target", 5000
+							positive: "F2 target", 1500
+							positive: "F5 target", 4500
 						endPause: "Continue", 1
 					elsif not f5
 						beginPause: "Manipulate formants"
-							positive: "F2 target", 2000
+							positive: "F2 target", 1500
 						endPause: "Continue", 1
 					endif
 				endif
@@ -550,25 +564,25 @@ elsif manipulation_method$ = "absolute"
 				if f4
 					if f5
 						beginPause: "Manipulate formants"
-							positive: "F3 target", 3000
-							positive: "F4 target", 4000
-							positive: "F5 target", 5000
+							positive: "F3 target", 2500
+							positive: "F4 target", 3500
+							positive: "F5 target", 4500
 						endPause: "Continue", 1
 					elsif not f5
 						beginPause: "Manipulate formants"
-							positive: "F3 target", 3000
-							positive: "F4 target", 4000
+							positive: "F3 target", 2500
+							positive: "F4 target", 3500
 						endPause: "Continue", 1
 					endif
 				elsif not f4
 					if f5
 						beginPause: "Manipulate formants"
-							positive: "F3 target", 3000
-							positive: "F5 target", 5000
+							positive: "F3 target", 2500
+							positive: "F5 target", 4500
 						endPause: "Continue", 1
 					elsif not f5
 						beginPause: "Manipulate formants"
-							positive: "F3 target", 3000
+							positive: "F3 target", 2500
 						endPause: "Continue", 1
 					endif
 				endif
@@ -576,18 +590,18 @@ elsif manipulation_method$ = "absolute"
 				if f4
 					if f5
 						beginPause: "Manipulate formants"
-							positive: "F4 target", 4000
-							positive: "F5 target", 5000
+							positive: "F4 target", 3500
+							positive: "F5 target", 4500
 						endPause: "Continue", 1
 					elsif not f5
 						beginPause: "Manipulate formants"
-							positive: "F4 target", 4000
+							positive: "F4 target", 3500
 						endPause: "Continue", 1
 					endif
 				elsif not f4
 					if f5
 						beginPause: "Manipulate formants"
-							positive: "F5 target", 5000
+							positive: "F5 target", 4500
 						endPause: "Continue", 1
 					elsif not f5
 						exitScript: "You must select at least one formant to manipulate."
@@ -724,7 +738,7 @@ for phone from 1 to numPhones
 		endif
 		
 		##Extract and manipulate token, formant by formant
-		@manipulateToken: oldToken, maximum_frequency, number_of_formants, manipulation_method$, f1_manip, f2_manip, f3_manip, f4_manip, f5_manip, start_with_highest_formant, manipulation_interval, time_buffer, minimum_pitch, time_step, maximum_intensity, print_information_on_tokens$
+		@manipulateToken: oldToken, maximum_frequency, number_of_formants, manipulation_method$, f1_manip, f2_manip, f3_manip, f4_manip, f5_manip, start_with_highest_formant, measurement_point, manipulation_interval, time_buffer, minimum_pitch, time_step, maximum_intensity, print_information_on_tokens$
 		selectObject: token[manipCt]
 		newToken = Extract part: phoneStart, phoneEnd, "rectangular", 1.0, "yes"
 		Scale intensity: loudnessNarrow
