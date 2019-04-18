@@ -13,7 +13,7 @@
 #### adds columns to the csv file with info on the manipulation.
 ####
 
-##TODO: Implement timing, monitor header, save files, option to save monitor to text file, condense pause windows (perhaps formants to manipulate could be less verbose, like a single text field)
+##TODO: save files, option to save monitor to text file, condense pause windows (perhaps formants to manipulate could be less verbose, like a single text field)
 
 stopwatch
 
@@ -32,14 +32,14 @@ soundName$ = selected$("Sound")
 tgName$ = selected$("TextGrid")
 
 beginPause: "Manipulate vowels"
-	comment: "Choose the tier that has nonempty intervals denoting the vowels to be manipulated."
+	# comment: "Choose the tier that has nonempty intervals denoting the vowels to be manipulated."
 	natural: "Segment tier", 1
-	comment: "How are segments to be manipulated labeled? If only manipulated segments are labeled, use .+"
+	# comment: "How are segments to be manipulated labeled? If only manipulated segments are labeled, use .+"
 	word: "Manipulation label", ".+"
-	comment: "Note: An improper choice for maximum frequency and number of formants will result in weird sounds."
+	# comment: "Note: An improper choice for maximum frequency and number of formants will result in weird sounds."
 	natural: "Maximum frequency (Hz)", 5000
 	positive: "Number of formants", 5
-	choice: "Manipulation method", 1
+	optionMenu: "Manipulation method", 1
 		option: "Relative (set desired increase/decrease)"
 		option: "Absolute (set desired formant target)"
 	comment: "Choose the formants to manipulate:"
@@ -48,66 +48,67 @@ beginPause: "Manipulate vowels"
 	boolean: "F3", 0
 	boolean: "F4", 0
 	boolean: "F5", 0
-	comment: "Note: It's recommended to set a small manipulation interval (e.g., one JND); to override, set to 10000."
+	# comment: "Note: It's recommended to set a small manipulation interval (e.g., one JND); to override, set to 10000."
 	positive: "Manipulation interval", 21.86
 	boolean: "Start with highest formant", 1
 	positive: "Minimum pitch (Hz)", 75
 clicked = endPause: "Continue", "Advanced settings", 1
+manipulation_method$ = replace_regex$(manipulation_method$, "^([A-Za-z]+) .*", "\1", 0)
+manipulation_method$ = replace_regex$(manipulation_method$, "(.)", "\l\1", 0)
 
 ##Advanced settings: default values
 ##time_buffer: How much time to extract before/after tokens?
 time_buffer = 0.05
 ##smoothing_window: Size of window to perform formant smoothing over (0 for no smoothing)
 smoothing_window = 0.02
-##final_intensity: Average intensity of output files
-final_intensity = 65
+##output_intensity: Average intensity of output files
+output_intensity = 65
 ##time_step: Time step for intensity cloning (0 for no cloning)
 time_step = 0.005
 ##maximum_intensity: Maximum intensity for intensity cloning
 maximum_intensity = 100
-##monitor: Print information on tokens?
-monitor = 1
-##keep_all_tokens_in_objects: Keep individual tokens in Praat Objects list?
-keep_all_tokens_in_objects = 0
+##monitor: Print information on tokens? ("verbose", "succinct","none")
+# monitor = 1
+print_information_on_tokens$ = "verbose"
+##token_information_output: Filename for csv output of token information (blank for no save)
+##Will need to validate file extension
+token_information_output$ = "" 
+##keep_individual_tokens: Keep individual tokens in Praat Objects list?
+keep_individual_tokens = 0
 ##keep_intermediary_stimuli: Keep intermediary stimuli in Praat Objects list?
 keep_intermediary_stimuli = 0
-##smoothTrans: Smooth formant transitions?
-smoothTrans = 1
-##keepTime: Print timing information?
-keepTime = 1
 ##save: Save manipulated stimuli in saveDir$ (provided it exists)?
-save = 0
+##Could also do this as providing manipulation suffix and/or prefix (prefix would need to be validated for directory existence)
+save = 0 
 
 ##Advanced settings: user-set values
 if clicked = 2
 	beginPause: "Advanced settings"
-		comment: "How much time to extract before/after tokens?"
 		positive: "Time buffer", 0.05
-		comment: "Size of window to perform formant smoothing over (0 for no smoothing)"
-		positive: "Smoothing window", 0.02
-		comment: "Average intensity of output files"
-		positive: "Final intensity", 65
+		positive: "Output intensity", 65
 		comment: "Time step for intensity cloning (0 for no cloning)"
 		positive: "Time step", 0.005
 		comment: "Maximum intensity for intensity cloning"
 		positive: "Maximum intensity", 100
-		comment: "Print information on tokens?"
-		boolean: "Monitor", 1
-		comment: "Print timing information?"
-		boolean: "Keep time", 1
-		comment: "Keep individual tokens in Praat Objects list?"
-		boolean: "Keep all tokens in objects", 0
-		comment: "Keep intermediary stimuli in Praat Objects list?"
-		boolean: "Keep intermediary stimuli", 0
-		comment: "Smooth formant transitions?"
-		boolean: "Smooth transitions", 1
+		comment: "Size of window to perform formant smoothing over (0 for no smoothing)"
+		positive: "Smoothing window", 0.02		
+		comment: "Monitor manipulation"
+		boolean: "Keep individual tokens (in Objects list)", 0
+		boolean: "Keep intermediary stimuli (in Objects list)", 0
+		# boolean: "Monitor", 1
+		optionMenu: "Print information on tokens", 1
+			option: "Verbose (info on each manipulation step for each token)"
+			option: "Succinct (info on each token)"
+			option: "None"
 	endPause: "Continue", 1
 endif
+print_information_on_tokens$ = replace_regex$(print_information_on_tokens$, "^([A-Za-z]+) .*", "\1", 0)
+print_information_on_tokens$ = replace_regex$(print_information_on_tokens$, "(.)", "\l\1", 0)
 
 ##Check the number of nonempty intervals on segment_tier and warn the user if it's more than a large number.
 selectObject: origTG
-numManip = Count intervals where: segment_tier, "matches (regex)", ".+"
-if numManip > 100
+numManipTokens = Count intervals where: segment_tier, "matches (regex)", manipulation_label$
+if numManipTokens > 100
 	beginPause: "Large number of manipulations"
 		comment: "There are 'numManip' nonempty intervals on tier 'segment_tier'."
 		comment: "This manipulation might take a while. Do you want to proceed?"
@@ -126,8 +127,7 @@ f3_target = undefined
 f4_target = undefined
 f5_target = undefined
 
-manipulation_method$ = replace_regex$(manipulation_method$, "^([A-Za-z]+) .*", "\1", 0)
-manipulation_method$ = replace_regex$(manipulation_method$, "(.)", "\l\1", 0)
+
 
 if manipulation_method$ = "relative"
 	if f1
@@ -606,16 +606,41 @@ elsif manipulation_method$ = "absolute"
 endif
 
 
-
-if monitor
+##Print monitor header
+if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
 	writeInfoLine: "MANIPULATION"
-	# if manipulation_method$ = "relative"
-		# appendInfoLine: ""
+	numManipForms = f1 + f2 + f3 + f4 + f5
+	# manipForms$ = ""
+	# ctr = 0
+	# for fmt from 1 to 5
+		# if f'fmt'
+			# ctr += 1
+			# manipForms$ = manipForms$ + "F'fmt'"
+			# if ctr < numManipForms
+				# manipForms$ = manipForms$ + ", "
+			# endif
+		# endif
+	# endfor
+	# appendInfoLine: manipForms$
+	ctr = 0
+	if manipulation_method$ = "relative"
+		appendInfo: "Formant increases: "
+		for fmt from 1 to 5
+			if f'fmt'
+				ctr += 1
+				appendInfo: "F", fmt, " ", fixed$(f'fmt'_increase, 0), "Hz"
+				if ctr < numManipForms
+					appendInfo: ", "
+				endif
+			endif
+		endfor
+	elsif manipulation_method$ = "absolute"
+		appendInfo: "Formant targets: "
+	endif
+	appendInfoLine: ""
 endif
 
-if keepTime
-	initTime = stopwatch
-endif
+initTime = stopwatch
 
 selectObject: origStim
 Shift times to: "start time", 0
@@ -680,16 +705,17 @@ for phone from 1 to numPhones
 		Rename: soundName$ + "_oldToken'tokenCt'"
 		
 		##Print monitor details
-		if monitor
-			appendInfoLine: "Token #'tokenCt' (label 'phoneLabel$'):"
-			appendInfoLine: tab$, "Manip count", tab$, "Formant", tab$, "Midpt", tab$, "Target", tab$, "Intvl", tab$, "Remaining increase"
+		if print_information_on_tokens$ = "verbose"
+			appendInfoLine: newline$, "Token #", tokenCt, " (label ""'phoneLabel$'"" on tier ", segment_tier, ", ", fixed$(phoneStart,3), "-", fixed$(phoneEnd,3), "s)"
+		elsif print_information_on_tokens$ = "succinct"
+			appendInfoLine: newline$, "Token #'tokenCt' (label ""'phoneLabel$'"")"
 		endif
 		
 		##Extract and manipulate token, formant by formant
 		if manipulation_method$ = "relative"
-			@manipulateToken: oldToken, maximum_frequency, number_of_formants, manipulation_method$, f1_increase, f2_increase, f3_increase, f4_increase, f5_increase, start_with_highest_formant, manipulation_interval, time_buffer, minimum_pitch, time_step, maximum_intensity, monitor
+			@manipulateToken: oldToken, maximum_frequency, number_of_formants, manipulation_method$, f1_increase, f2_increase, f3_increase, f4_increase, f5_increase, start_with_highest_formant, manipulation_interval, time_buffer, minimum_pitch, time_step, maximum_intensity, print_information_on_tokens$
 		elsif manipulation_method$ = "absolute"
-			@manipulateToken: oldToken, maximum_frequency, number_of_formants, manipulation_method$, f1_target, f2_target, f3_target, f4_target, f5_target, start_with_highest_formant, manipulation_interval, time_buffer, minimum_pitch, time_step, maximum_intensity, monitor
+			@manipulateToken: oldToken, maximum_frequency, number_of_formants, manipulation_method$, f1_target, f2_target, f3_target, f4_target, f5_target, start_with_highest_formant, manipulation_interval, time_buffer, minimum_pitch, time_step, maximum_intensity, print_information_on_tokens$
 		endif
 		selectObject: token[manipCt]
 		newToken = Extract part: phoneStart, phoneEnd, "rectangular", 1.0, "yes"
@@ -720,7 +746,7 @@ for phone from 1 to numPhones
 		
 		##Clean up created objects
 		removeObject: beforeToken, afterToken
-		if not keep_all_tokens_in_objects
+		if not keep_individual_tokens
 			removeObject: oldToken, newToken
 		endif
 		
@@ -729,8 +755,8 @@ for phone from 1 to numPhones
 		##	at both the left and right edges need to be smoothed. This might be too
 		##	much manipulation, so take care with this.
 		if smoothing_window > 0
-			if monitor
-				appendInfo: tab$, "Smoothing transitions for: "
+			if print_information_on_tokens$ = "verbose"
+				appendInfo: "Smoothing transitions for: "
 			endif
 			##Assume that preceding and following max frequency and number of formants are the same as the token
 			prec_maximum_frequency = maximum_frequency
@@ -755,7 +781,7 @@ for phone from 1 to numPhones
 				
 				##If formant was set to be manipulated
 				if not (f'manipFmt'_increase = undefined and f'manipFmt'_target = undefined)
-					if monitor
+					if print_information_on_tokens$ = "verbose"
 						appendInfo: "F'manipFmt' "
 					endif
 					##Smooth left-edge transition
@@ -773,7 +799,7 @@ for phone from 1 to numPhones
 				endif
 			endfor
 			
-			if monitor
+			if print_information_on_tokens$ = "verbose"
 				appendInfoLine: ""
 			endif
 		##if smoothing_window > 0
@@ -782,9 +808,17 @@ for phone from 1 to numPhones
 	endif
 endfor
 
-##Get final versions of objects
+manipTime = stopwatch
+
+if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
+	appendInfoLine: newline$, "Initialization:", tab$, fixed$(initTime,3), "s"
+	appendInfoLine: "Manipulation:", tab$, fixed$(manipTime,3), "s"
+endif
+
+##Select final versions of objects
 selectObject: manipStim
 finalStim = Copy: soundName$ + "_manip"
+Scale intensity: output_intensity
 if not keep_intermediary_stimuli
 	removeObject: manipStim
 endif
@@ -792,4 +826,3 @@ selectObject: manipTG
 finalTG = Copy: tgName$ + "_manip"
 removeObject: manipTG
 selectObject: finalStim, finalTG
-

@@ -22,13 +22,18 @@ include CloneIntensityProc.praat
 # timeStep = 0.005
 # maxIntensity = 100
 
-procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1, f2, f3, f4, f5, start_with_highest_formant, manipulation_interval, buffer, minPitch, timeStep, maxIntensity, monitor
+procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1, f2, f3, f4, f5, start_with_highest_formant, manipulation_interval, buffer, minPitch, timeStep, maxIntensity, print_information_on_tokens$
 	manipType$ = replace_regex$(manipType$, "(.)", "\l\1", 0)
 	if not (manipType$ = "absolute" or manipType$ = "abs" or manipType$ = "relative" or manipType$ = "rel") 
 		exitScript: "Invalid manipType$ value. Must be 'abs[olute]' or 'rel[ative]'."
 	endif
 	manipCt = 1
 	token[manipCt] = oldToken
+	
+	##Print verbose monitor details
+	if print_information_on_tokens$ = "verbose"
+		appendInfoLine: "Formant", tab$, "Manip#", tab$, "Midpt", tab$, "Target", tab$, "Diff", tab$, "Intvl"
+	endif
 	
 	##Iterate manipulation over each formant
 	for fmt from 1 to 5
@@ -38,31 +43,32 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1, f2, f3, 
 		else
 			manipFmt = fmt
 		endif
-		manipCtFmt = 1
 		
 		##Manipulate only if desired increase is nonzero
 		if not f'manipFmt' = undefined
+			manipCtFmt[manipFmt] = 1
+			
 			##Get midpoints
 			@getIngredients: token[manipCt], maxFreq, numForms, buffer
 			selectObject: formantObj
-			midpointF'manipFmt' = Get value at time: manipFmt, vowelMid, "Hertz", "Linear"
+			origF'manipFmt' = Get value at time: manipFmt, vowelMid, "Hertz", "Linear"
 			
 			if manipType$ = "absolute" or manipType$ = "abs"
 				desired_F'manipFmt' = f'manipFmt'
-				f'manipFmt'_increase = desired_F'manipFmt' - midpointF'manipFmt'
+				f'manipFmt'_increase = desired_F'manipFmt' - origF'manipFmt'
 			elsif manipType$ = "relative" or manipType$ = "rel"
 				f'manipFmt'_increase = f'manipFmt'
-				desired_F'manipFmt' = midpointF'manipFmt' + f'manipFmt'_increase
+				desired_F'manipFmt' = origF'manipFmt' + f'manipFmt'_increase
 			endif
-			newF'manipFmt'[manipCt] = midpointF'manipFmt'
+			newF'manipFmt'[manipCt] = origF'manipFmt'
 			
 			##Track remaining increase, initialized as overall desired increase
 			remainingIncr = f'manipFmt'_increase
 			##While loop runs as long as the remaining formant increase is
 			##larger in magnitude than the manipulation interval (JND)
 			while abs(remainingIncr) >= manipulation_interval
-				if monitor
-					appendInfoLine: tab$, manipCt, tab$, tab$, manipFmt, tab$, fixed$(newF'manipFmt'[manipCt],2), tab$, fixed$(desired_F'manipFmt',2), tab$, fixed$(manipulation_interval,2), tab$, fixed$(remainingIncr,2)
+				if print_information_on_tokens$ = "verbose"
+					appendInfoLine: manipFmt, tab$, manipCtFmt[manipFmt], tab$, fixed$(newF'manipFmt'[manipCt],2), tab$, fixed$(desired_F'manipFmt',2), tab$, fixed$(remainingIncr,2), tab$, fixed$(manipulation_interval,2)
 				endif
 				##Determine magnitude and sign of manipulation and perform manipulation
 				manip = manipulation_interval * (remainingIncr/abs(remainingIncr))
@@ -71,7 +77,7 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1, f2, f3, 
 				newObjValue = Get value at time: manipFmt, vowelMid, "Hertz", "Linear"
 				selectObject: source, formantObj
 				manipCt += 1
-				manipCtFmt += 1
+				manipCtFmt[manipFmt] += 1
 				sourceFilter = Filter
 				Rename: "sourceFilter"
 				token[manipCt] = Resample: sampFreq, 50
@@ -88,9 +94,11 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1, f2, f3, 
 				endif
 			endwhile
 			
-			
 			##Once remaining formant increase is smaller in magnitude than
 			##the manipulation interval (JND), get the rest of the way.
+			if print_information_on_tokens$ = "verbose"
+				appendInfoLine: manipFmt, tab$, manipCtFmt[manipFmt], tab$, fixed$(newF'manipFmt'[manipCt],2), tab$, fixed$(desired_F'manipFmt',2), tab$, fixed$(remainingIncr,2), tab$, fixed$(manipulation_interval,2)
+			endif
 			selectObject: formantObj
 			Formula (frequencies): "if row = " + string$(manipFmt) + " then self + " + string$(remainingIncr) + " else self fi"
 			newObjValue = Get value at time: manipFmt, vowelMid, "Hertz", "Linear"
@@ -101,7 +109,7 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1, f2, f3, 
 			Rename: "newToken"
 			Scale intensity: loudnessLow
 			manipCt += 1
-			manipCtFmt += 1
+			manipCtFmt[manipFmt] += 1
 			selectObject: newToken
 			formant = To Formant (burg): 0, numForms, maxFreq, 0.025, 50
 			newF'manipFmt'[manipCt] = Get value at time: manipFmt, vowelMid, "Hertz", "Linear"
@@ -121,10 +129,13 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1, f2, f3, 
 					removeObject: token[manipCt-1]
 				endif
 			endif
+			remainingIncr = desired_F'manipFmt' - newF'manipFmt'[manipCt]
+
+			
+			
 			##Add high-frquency portion of the signal back in
 			selectObject: token[manipCt]
 			Formula: "self[col] + Sound_highFreq[col]"
-			remainingIncr = desired_F'manipFmt' - newF'manipFmt'[manipCt]
 			
 			##Run cloneIntensity procedure to clone intensity contour (which 
 			##may have been affected by manipulation)
@@ -139,8 +150,11 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1, f2, f3, 
 	
 			##Clean up created objects
 			removeObject: highFreq, loudnessTokenNarrow, loudnessTokenLow, lowFreq, lpc, source, formantObj
+		##if not f'manipFmt' = undefined
 		endif
+	##for fmt from 1 to 5
 	endfor
+	
 	##Measure output tokens
 	selectObject: token[manipCt]
 	newFormantObj = To Formant (burg): 0, numForms, maxFreq, 0.025, 50
@@ -149,5 +163,22 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1, f2, f3, 
 	newF3 = Get value at time: 3, vowelMid, "Hertz", "Linear"
 	newF4 = Get value at time: 4, vowelMid, "Hertz", "Linear"
 	newF5 = Get value at time: 5, vowelMid, "Hertz", "Linear"
+	
+	##Print monitor details on final manip
+	if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
+		appendInfoLine: "Formant", tab$, "#Manips", tab$, "Orig", tab$, "Final", tab$, "Diff", tab$, "Target", tab$, "Off-Target"
+		
+		for fmt from 1 to 5
+			if start_with_highest_formant
+				manipFmt = 6 - fmt
+			else
+				manipFmt = fmt
+			endif
+			
+			if not f'manipFmt' = undefined
+				appendInfoLine: manipFmt, tab$, manipCtFmt[manipFmt], tab$, fixed$(origF'manipFmt',2), tab$, fixed$(newF'manipFmt',2), tab$, fixed$(newF'manipFmt'-origF'manipFmt',2), tab$, fixed$(desired_F'manipFmt',2), tab$, fixed$(desired_F'manipFmt'-newF'manipFmt',2)
+			endif
+		endfor
+	endif
 	removeObject: newFormantObj
 endproc
