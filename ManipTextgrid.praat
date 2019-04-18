@@ -28,7 +28,7 @@ endif
 
 origStim = selected("Sound")
 origTG = selected("TextGrid")
-soundName$ = selected$("Sound")
+origSoundName$ = selected$("Sound")
 tgName$ = selected$("TextGrid")
 
 beginPause: "Manipulate vowels"
@@ -116,18 +116,11 @@ if numManipTokens > 100
 endif
 
 ##Initialize manipulation values
-f1_increase = undefined
-f2_increase = undefined
-f3_increase = undefined
-f4_increase = undefined
-f5_increase = undefined
-f1_target = undefined
-f2_target = undefined
-f3_target = undefined
-f4_target = undefined
-f5_target = undefined
-
-
+f1_manip = undefined
+f2_manip = undefined
+f3_manip = undefined
+f4_manip = undefined
+f5_manip = undefined
 
 if manipulation_method$ = "relative"
 	if f1
@@ -605,6 +598,24 @@ elsif manipulation_method$ = "absolute"
 	endif
 endif
 
+if manipulation_method$ = "relative"
+	for fmt from 1 to 5
+		if f'fmt'
+			f'fmt'_manip = f'fmt'_increase
+		else
+			f'fmt'_manip = undefined
+		endif
+	endfor
+elsif manipulation_method$ = "absolute"
+	for fmt from 1 to 5
+		if f'fmt'
+			f'fmt'_manip = f'fmt'_target
+		else
+			f'fmt'_manip = undefined
+		endif
+	endfor
+endif
+
 
 ##Print monitor header
 if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
@@ -628,7 +639,7 @@ if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "s
 		for fmt from 1 to 5
 			if f'fmt'
 				ctr += 1
-				appendInfo: "F", fmt, " ", fixed$(f'fmt'_increase, 0), "Hz"
+				appendInfo: "F", fmt, " ", fixed$(f'fmt'_manip, 0), "Hz"
 				if ctr < numManipForms
 					appendInfo: ", "
 				endif
@@ -640,22 +651,23 @@ if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "s
 	appendInfoLine: ""
 endif
 
-initTime = stopwatch
-
+##Create versions of origStim and origTG to be manipulated
 selectObject: origStim
 Shift times to: "start time", 0
 stimStart = 0
 stimEnd = Get end time
-manipStim = Copy: soundName$ + "_manip"
-
+manipStim = Copy: origSoundName$ + "_manip"
 selectObject: origTG
 numPhones = Get number of intervals: segment_tier
 Shift times to: "start time", 0
 manipTG = Copy: tgName$ + "_manip"
 adjustStart = 0
 
+##Counter, timer
 tokenCt = 0
+initTime = stopwatch
 
+##Manipulation loop
 for phone from 1 to numPhones
 	selectObject: manipTG
 	phoneLabel$ = Get label of interval: segment_tier, phone
@@ -682,7 +694,7 @@ for phone from 1 to numPhones
 		else
 			selectObject: manipStim
 			beforeToken = Extract part: 0, phoneStart, "rectangular", 1.0, "yes"
-			Rename: soundName$ + "_beforeToken'tokenCt'"
+			Rename: origSoundName$ + "_beforeToken'tokenCt'"
 			tokenStart = phoneStart - time_buffer
 		endif
 		
@@ -702,7 +714,7 @@ for phone from 1 to numPhones
 		##Extract token
 		selectObject: manipStim
 		oldToken = Extract part: tokenStart, tokenEnd, "rectangular", 1.0, "yes"
-		Rename: soundName$ + "_oldToken'tokenCt'"
+		Rename: origSoundName$ + "_oldToken'tokenCt'"
 		
 		##Print monitor details
 		if print_information_on_tokens$ = "verbose"
@@ -712,15 +724,11 @@ for phone from 1 to numPhones
 		endif
 		
 		##Extract and manipulate token, formant by formant
-		if manipulation_method$ = "relative"
-			@manipulateToken: oldToken, maximum_frequency, number_of_formants, manipulation_method$, f1_increase, f2_increase, f3_increase, f4_increase, f5_increase, start_with_highest_formant, manipulation_interval, time_buffer, minimum_pitch, time_step, maximum_intensity, print_information_on_tokens$
-		elsif manipulation_method$ = "absolute"
-			@manipulateToken: oldToken, maximum_frequency, number_of_formants, manipulation_method$, f1_target, f2_target, f3_target, f4_target, f5_target, start_with_highest_formant, manipulation_interval, time_buffer, minimum_pitch, time_step, maximum_intensity, print_information_on_tokens$
-		endif
+		@manipulateToken: oldToken, maximum_frequency, number_of_formants, manipulation_method$, f1_manip, f2_manip, f3_manip, f4_manip, f5_manip, start_with_highest_formant, manipulation_interval, time_buffer, minimum_pitch, time_step, maximum_intensity, print_information_on_tokens$
 		selectObject: token[manipCt]
 		newToken = Extract part: phoneStart, phoneEnd, "rectangular", 1.0, "yes"
 		Scale intensity: loudnessNarrow
-		Rename: soundName$ + "_token'tokenCt'"
+		Rename: origSoundName$ + "_token'tokenCt'"
 		if oldToken <> token[manipCt]
 			removeObject: token[manipCt]
 		endif
@@ -729,7 +737,7 @@ for phone from 1 to numPhones
 		if stimEnd - phoneEnd > time_buffer
 			selectObject: manipStim
 			afterToken = Extract part: phoneEnd, stimEnd, "rectangular", 1.0, "yes"
-			Rename: soundName$ + "_afterToken'tokenCt'"
+			Rename: origSoundName$ + "_afterToken'tokenCt'"
 		endif
 		if not keep_intermediary_stimuli
 			removeObject: manipStim
@@ -742,7 +750,7 @@ for phone from 1 to numPhones
 		endif
 		plusObject: newToken
 		manipStim = Concatenate
-		Rename: soundName$ + "_'tokenCt'_tokens_manipulated"
+		Rename: origSoundName$ + "_'tokenCt'_tokens_manipulated"
 		
 		##Clean up created objects
 		removeObject: beforeToken, afterToken
@@ -780,9 +788,12 @@ for phone from 1 to numPhones
 				endif
 				
 				##If formant was set to be manipulated
-				if not (f'manipFmt'_increase = undefined and f'manipFmt'_target = undefined)
+				if f'manipFmt'
 					if print_information_on_tokens$ = "verbose"
 						appendInfo: "F'manipFmt' "
+						if fmt = 5
+							appendInfoLine: ""
+						endif
 					endif
 					##Smooth left-edge transition
 					@smoothTransitions: manipStim, smoothTime, smoothing_window, 2, prec_maximum_frequency, prec_number_of_formants, maximum_frequency, number_of_formants, time_buffer, minimum_pitch
@@ -798,14 +809,11 @@ for phone from 1 to numPhones
 					removeObject: smoothedSoundLeft
 				endif
 			endfor
-			
-			if print_information_on_tokens$ = "verbose"
-				appendInfoLine: ""
-			endif
 		##if smoothing_window > 0
 		endif
 	##if index_regex(phoneLabel$, manipulation_label$) > 0
 	endif
+##Manipulation loop: for phone from 1 to numPhones
 endfor
 
 manipTime = stopwatch
@@ -817,7 +825,7 @@ endif
 
 ##Select final versions of objects
 selectObject: manipStim
-finalStim = Copy: soundName$ + "_manip"
+finalStim = Copy: origSoundName$ + "_manip"
 Scale intensity: output_intensity
 if not keep_intermediary_stimuli
 	removeObject: manipStim

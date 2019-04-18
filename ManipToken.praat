@@ -22,7 +22,7 @@ include CloneIntensityProc.praat
 # timeStep = 0.005
 # maxIntensity = 100
 
-procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1, f2, f3, f4, f5, start_with_highest_formant, manipulation_interval, buffer, minPitch, timeStep, maxIntensity, print_information_on_tokens$
+procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1_manip, f2_manip, f3_manip, f4_manip, f5_manip, start_with_highest_formant, manipulation_interval, buffer, minPitch, timeStep, maxIntensity, print_information_on_tokens$
 	manipType$ = replace_regex$(manipType$, "(.)", "\l\1", 0)
 	if not (manipType$ = "absolute" or manipType$ = "abs" or manipType$ = "relative" or manipType$ = "rel") 
 		exitScript: "Invalid manipType$ value. Must be 'abs[olute]' or 'rel[ative]'."
@@ -32,7 +32,7 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1, f2, f3, 
 	
 	##Print verbose monitor details
 	if print_information_on_tokens$ = "verbose"
-		appendInfoLine: "Formant", tab$, "Manip#", tab$, "Midpt", tab$, "Target", tab$, "Diff", tab$, "Intvl"
+		appendInfoLine: "Formant", tab$, "Manip#", tab$, "Current", tab$, "Target", tab$, "Diff", tab$, "Intvl"
 	endif
 	
 	##Iterate manipulation over each formant
@@ -45,7 +45,7 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1, f2, f3, 
 		endif
 		
 		##Manipulate only if desired increase is nonzero
-		if not f'manipFmt' = undefined
+		if not f'manipFmt'_manip = undefined
 			manipCtFmt[manipFmt] = 1
 			
 			##Get midpoints
@@ -54,10 +54,10 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1, f2, f3, 
 			origF'manipFmt' = Get value at time: manipFmt, vowelMid, "Hertz", "Linear"
 			
 			if manipType$ = "absolute" or manipType$ = "abs"
-				desired_F'manipFmt' = f'manipFmt'
+				desired_F'manipFmt' = f'manipFmt'_manip
 				f'manipFmt'_increase = desired_F'manipFmt' - origF'manipFmt'
 			elsif manipType$ = "relative" or manipType$ = "rel"
-				f'manipFmt'_increase = f'manipFmt'
+				f'manipFmt'_increase = f'manipFmt'_manip
 				desired_F'manipFmt' = origF'manipFmt' + f'manipFmt'_increase
 			endif
 			newF'manipFmt'[manipCt] = origF'manipFmt'
@@ -150,7 +150,7 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1, f2, f3, 
 	
 			##Clean up created objects
 			removeObject: highFreq, loudnessTokenNarrow, loudnessTokenLow, lowFreq, lpc, source, formantObj
-		##if not f'manipFmt' = undefined
+		##if not f'manipFmt'_manip = undefined
 		endif
 	##for fmt from 1 to 5
 	endfor
@@ -175,7 +175,7 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1, f2, f3, 
 				manipFmt = fmt
 			endif
 			
-			if not f'manipFmt' = undefined
+			if not f'manipFmt'_manip = undefined
 				appendInfoLine: manipFmt, tab$, manipCtFmt[manipFmt], tab$, fixed$(origF'manipFmt',2), tab$, fixed$(newF'manipFmt',2), tab$, fixed$(newF'manipFmt'-origF'manipFmt',2), tab$, fixed$(desired_F'manipFmt',2), tab$, fixed$(desired_F'manipFmt'-newF'manipFmt',2)
 			endif
 		endfor
