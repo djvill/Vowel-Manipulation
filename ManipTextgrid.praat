@@ -13,7 +13,7 @@
 #### adds columns to the csv file with info on the manipulation.
 ####
 
-##TODO: save files, option to save monitor to text file, condense pause windows (perhaps formants to manipulate could be less verbose, like a single text field)
+##TODO: rewrite header, option to save monitor to text file, option to save monitor to TextGrid, condense pause windows (perhaps formants to manipulate could be less verbose, like a single text field)
 
 stopwatch
 
@@ -29,7 +29,7 @@ endif
 origStim = selected("Sound")
 origTG = selected("TextGrid")
 origSoundName$ = selected$("Sound")
-tgName$ = selected$("TextGrid")
+origTGName$ = selected$("TextGrid")
 
 beginPause: "Manipulate vowels"
 	# comment: "Choose the tier that has nonempty intervals denoting the vowels to be manipulated."
@@ -79,9 +79,9 @@ token_information_output$ = ""
 keep_individual_tokens = 0
 ##keep_intermediary_stimuli: Keep intermediary stimuli in Praat Objects list?
 keep_intermediary_stimuli = 0
-##save: Save manipulated stimuli in saveDir$ (provided it exists)?
-##Could also do this as providing manipulation suffix and/or prefix (prefix would need to be validated for directory existence)
-save = 0 
+##filename_prefix and filename_suffix: Add these to save files (leave both blank to not save sound and TextGrid); prefix may have subdirectories that will be created if they don't exist
+filename_prefix$ = ""
+filename_suffix$ = ""
 
 ##Advanced settings: user-set values
 if clicked = 2
@@ -95,18 +95,56 @@ if clicked = 2
 		positive: "Maximum intensity", 100
 		comment: "Size of window to perform formant smoothing over (0 for no smoothing)"
 		positive: "Smoothing window", 0.02		
-		comment: "Monitor manipulation"
-		boolean: "Keep individual tokens (in Objects list)", 0
-		boolean: "Keep intermediary stimuli (in Objects list)", 0
-		# boolean: "Monitor", 1
+		comment: "Settings for getting data on manipulation"
 		optionMenu: "Print information on tokens", 1
 			option: "Verbose (info on each manipulation step for each token)"
 			option: "Succinct (info on each token)"
 			option: "None"
+		boolean: "Keep individual tokens (in Objects list)", 0
+		boolean: "Keep intermediary stimuli (in Objects list)", 0
+		comment: "Save filename affixes (leave both blank to not save sound and TextGrid)"
+		sentence: "Filename prefix (including subdirectory)", ""
+		sentence: "Filename suffix", ""
 	endPause: "Continue", 1
 endif
 print_information_on_tokens$ = replace_regex$(print_information_on_tokens$, "^([A-Za-z]+) .*", "\1", 0)
 print_information_on_tokens$ = replace_regex$(print_information_on_tokens$, "(.)", "\l\1", 0)
+
+##Create subdirectories if need be
+prefLen = length(filename_prefix$)
+if prefLen > 0
+	filename_prefix$ = replace$(filename_prefix$, "\", "/", 0)
+	substr$ = filename_prefix$
+	slash = 0
+	subSlash = index(filename_prefix$, "/")
+	while subSlash > 0
+		slash += subSlash
+		dir$ = left$(filename_prefix$, slash)
+		createDirectory: dir$
+		substr$ = mid$(filename_prefix$, slash+1, prefLen-slash+1)
+		subSlash = index(substr$, "/")
+	endwhile
+endif
+
+##Get full filenames, and warn the user if files already existence
+if prefLen > 0 or length(filename_suffix$) > 0
+	outputSoundFile$ = filename_prefix$ + origSoundName$ + filename_suffix$ + ".wav"
+	outputTGFile$ = filename_prefix$ + origTGName$ + filename_suffix$ + ".textgrid"
+	if fileReadable(outputSoundFile$) and not fileReadable(outputTGFile$)
+		beginPause: "Overwrite sound file?"
+			comment: "File 'outputSoundFile$' already exists. Are you sure you want to overwrite?"
+		endPause: "Yes", 1
+	elsif not fileReadable(outputSoundFile$) and fileReadable(outputTGFile$)
+		beginPause: "Overwrite textgrid file?"
+			comment: "File 'outputTGFile$' already exists. Are you sure you want to overwrite?"
+		endPause: "Yes", 1
+	elsif fileReadable(outputSoundFile$) and fileReadable(outputTGFile$)
+		beginPause: "Overwrite files?"
+			comment: "Files 'outputSoundFile$' and 'outputTGFile$' already exist. Are you sure you want to overwrite?"
+		endPause: "Yes", 1
+	endif
+endif
+
 ##Handle measurement_point
 if measurement_point <= 0 or measurement_point >= 1
 	exitScript: "Invalid manipulation point. Must be greater than 0 and less than 1"
@@ -635,18 +673,6 @@ endif
 if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
 	writeInfoLine: "MANIPULATION"
 	numManipForms = f1 + f2 + f3 + f4 + f5
-	# manipForms$ = ""
-	# ctr = 0
-	# for fmt from 1 to 5
-		# if f'fmt'
-			# ctr += 1
-			# manipForms$ = manipForms$ + "F'fmt'"
-			# if ctr < numManipForms
-				# manipForms$ = manipForms$ + ", "
-			# endif
-		# endif
-	# endfor
-	# appendInfoLine: manipForms$
 	ctr = 0
 	if manipulation_method$ = "relative"
 		appendInfo: "Formant increases: "
@@ -674,7 +700,7 @@ manipStim = Copy: origSoundName$ + "_manip"
 selectObject: origTG
 numPhones = Get number of intervals: segment_tier
 Shift times to: "start time", 0
-manipTG = Copy: tgName$ + "_manip"
+manipTG = Copy: origTGName$ + "_manip"
 adjustStart = 0
 
 ##Counter, timer
@@ -837,7 +863,7 @@ if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "s
 	appendInfoLine: "Manipulation:", tab$, fixed$(manipTime,3), "s"
 endif
 
-##Select final versions of objects
+##Create, save, and select final versions of objects
 selectObject: manipStim
 finalStim = Copy: origSoundName$ + "_manip"
 Scale intensity: output_intensity
@@ -845,6 +871,17 @@ if not keep_intermediary_stimuli
 	removeObject: manipStim
 endif
 selectObject: manipTG
-finalTG = Copy: tgName$ + "_manip"
+finalTG = Copy: origTGName$ + "_manip"
 removeObject: manipTG
+##Save
+if length(filename_prefix$) > 0 or length(filename_suffix$) > 0
+	selectObject: finalStim
+	Save as WAV file: outputSoundFile$
+	selectObject: finalTG
+	Save as text file: outputTGFile$
+	if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
+		appendInfoLine: newline$, "Files saved as 'outputSoundFile$' and 'outputTGFile$'."
+	endif
+endif
+##Select
 selectObject: finalStim, finalTG
