@@ -2,7 +2,7 @@
 #### Praat script ManipulateToken
 #### Dan Villarreal
 ####
-#### This script hosts a function that manipulates a single token
+#### This script hosts a procedure that manipulates a single token
 #### by specified F1, F2, F3, F4, and/or F5 differences. It iterates formant
 #### increases by small formant steps (manipulation intervals, which work well
 #### as JNDs) specified by the user. This interval approach drastically improves

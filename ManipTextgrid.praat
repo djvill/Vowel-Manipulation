@@ -28,7 +28,7 @@ beginPause: "Manipulate vowels"
 	# comment: "Choose the tier that has nonempty intervals denoting the vowels to be manipulated."
 	natural: "Segment tier", 1
 	# comment: "How are segments to be manipulated labeled? If only manipulated segments are labeled, use .+"
-	word: "Manipulation label", ".+"
+	word: "Search string (regular expression)", ".+"
 	# comment: "Note: An improper choice for maximum frequency and number of formants will result in weird sounds."
 	natural: "Maximum frequency (Hz)", 5000
 	positive: "Number of formants", 5
@@ -172,7 +172,7 @@ endif
 
 ##Check the number of nonempty intervals on segment_tier and warn the user if it's more than a large number.
 selectObject: origTG
-numManipTokens = Count intervals where: segment_tier, "matches (regex)", manipulation_label$
+numManipTokens = Count intervals where: segment_tier, "matches (regex)", search_string$
 if numManipTokens > 100
 	beginPause: "Large number of manipulations"
 		comment: "There are 'numManip' nonempty intervals on tier 'segment_tier'."
@@ -709,7 +709,7 @@ endif
 ##If outputting info to csv, set up table columns
 if write_monitor_to_file$ = "csv"
 	##Basic settings
-	table = Create Table with column names: "ManipLog", 1, "Sound TextGrid Segment_tier Manipulation_label Maximum_frequency Number_of_formants Manipulation_method"
+	table = Create Table with column names: "ManipLog", 1, "Sound TextGrid Segment_tier Search_string Maximum_frequency Number_of_formants Manipulation_method"
 	##Manipulation values, depending on which formants were manipulated
 	for fmt from 1 to 5
 		if start_with_highest_formant
@@ -772,7 +772,7 @@ for phone from 1 to numPhones
 	phoneLabel$ = Get label of interval: segment_tier, phone
 	
 	##Manipulate if the phone label matches the manipulation label
-	if index_regex(phoneLabel$, manipulation_label$) > 0
+	if index_regex(phoneLabel$, search_string$) > 0
 		tokenCt += 1
 		
 		##Here, "phone" refers to the segment, "token" to the segment plus left and/or right buffer
@@ -940,7 +940,7 @@ for phone from 1 to numPhones
 			endfor
 		##if smoothing_window > 0
 		endif
-	##if index_regex(phoneLabel$, manipulation_label$) > 0
+	##if index_regex(phoneLabel$, search_string$) > 0
 	endif
 ##Manipulation loop: for phone from 1 to numPhones
 endfor
@@ -961,7 +961,7 @@ if write_monitor_to_file$ = "csv"
 		Set string value: logRow, "Sound", origSoundName$
 		Set string value: logRow, "TextGrid", origTGName$
 		Set numeric value: logRow, "Segment_tier", segment_tier
-		Set string value: logRow, "Manipulation_label", manipulation_label$
+		Set string value: logRow, "Search_string", search_string$
 		Set numeric value: logRow, "Maximum_frequency", maximum_frequency
 		Set numeric value: logRow, "Number_of_formants", number_of_formants
 		Set string value: logRow, "Manipulation_method", manipulation_method$
