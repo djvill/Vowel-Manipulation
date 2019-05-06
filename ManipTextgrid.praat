@@ -128,34 +128,20 @@ if prefLen > 0 or length(filename_suffix$) > 0
 	outputTGFile$ = filename_prefix$ + origTGName$ + filename_suffix$ + ".textgrid"
 	if fileReadable(outputSoundFile$) and not fileReadable(outputTGFile$)
 		beginPause: "Overwrite sound file?"
-			comment: "File 'outputSoundFile$' already exists. Are you sure you want to overwrite?"
-		endPause: "Yes", 1
+			comment: "File 'outputSoundFile$' already exists.'newline$'Are you sure you want to overwrite?"
+		saveFiles = endPause: "Yes", "No", 1
 	elsif not fileReadable(outputSoundFile$) and fileReadable(outputTGFile$)
 		beginPause: "Overwrite textgrid file?"
-			comment: "File 'outputTGFile$' already exists. Are you sure you want to overwrite?"
-		endPause: "Yes", 1
+			comment: "File 'outputTGFile$' already exists.'newline$'Are you sure you want to overwrite?"
+		saveFiles = endPause: "Yes", "No", 1
 	elsif fileReadable(outputSoundFile$) and fileReadable(outputTGFile$)
 		beginPause: "Overwrite files?"
-			comment: "Files 'outputSoundFile$' and 'outputTGFile$' already exist. Are you sure you want to overwrite?"
-		endPause: "Yes", 1
+			comment: "Files 'outputSoundFile$' and 'outputTGFile$' already exist.'newline$'Are you sure you want to overwrite?"
+		saveFiles = endPause: "Yes", "No", 1
+	else
+		saveFiles = 1
 	endif
 	
-	##Handle logfile
-	if write_monitor_to_file$ = "csv"
-		outputLogFile$ = filename_prefix$ + origSoundName$ + filename_suffix$ + "_ManipLog.csv"
-		if fileReadable(outputLogFile$)
-			beginPause: "Overwrite log file?"
-				comment: "File 'outputLogFile$' already exists. Are you sure you want to overwrite?"
-			endPause: "Yes", 1
-		endif
-	elsif write_monitor_to_file$ = "txt"
-		outputLogFile$ = filename_prefix$ + origSoundName$ + filename_suffix$ + "_ManipLog.txt"
-		if fileReadable(outputLogFile$)
-			beginPause: "Overwrite log file?"
-				comment: "File 'outputLogFile$' already exists. Are you sure you want to overwrite?"
-			endPause: "Yes", 1
-		endif
-	endif
 endif
 
 ##Handle measurement_point
@@ -709,42 +695,7 @@ endif
 ##If outputting info to csv, set up table columns
 if write_monitor_to_file$ = "csv"
 	##Basic settings
-	table = Create Table with column names: "ManipLog", 1, "Sound TextGrid Segment_tier Search_string Maximum_frequency Number_of_formants Manipulation_method"
-	##Manipulation values, depending on which formants were manipulated
-	for fmt from 1 to 5
-		if start_with_highest_formant
-			colFmt = 6 - fmt
-		else
-			colFmt = fmt
-		endif
-		if f'colFmt'
-			Append column: "F" + string$(colFmt) + "_manipulation"
-		endif
-	endfor
-	##Other basic settings
-	Append column: "Manipulation_interval"
-	Append column: "Start_with_highest_formant"
-	Append column: "Minimum_pitch"
-	##Advanced settings
-	Append column: "Measurement_point"
-	Append column: "Time_buffer"
-	Append column: "Output_intensity"
-	Append column: "Time_step"
-	Append column: "Maximum_intensity"
-	Append column: "Smoothing_window"
-	##Output data
-	Append column: "Token_number"
-	Append column: "Token_label"
-	Append column: "Token_start"
-	Append column: "Token_end"
-	Append column: "Formant"
-	Append column: "Manipulation_steps"
-	Append column: "Original"
-	Append column: "Final"
-	Append column: "Overall_manipulation_size"
-	Append column: "Manipulation_target"
-	Append column: "Manipulation_off-target"
-	Append column: "Processing_time"
+	table = Create Table with column names: "ManipLog", 1, "Sound TextGrid Segment_tier Search_string Maximum_frequency Number_of_formants Manipulation_method F1_manipulation F2_manipulation F3_manipulation F4_manipulation F5_manipulation Manipulation_interval Start_with_highest_formant Minimum_pitch Measurement_point Time_buffer Output_intensity Time_step Maximum_intensity Smoothing_window Token_number Token_label Token_start Token_end Formant Manipulation_steps Original Final Overall_manipulation_size Manipulation_target Manipulation_off-target Processing_time"
 endif
 
 ##Create versions of origStim and origTG to be manipulated
@@ -965,16 +916,11 @@ if write_monitor_to_file$ = "csv"
 		Set numeric value: logRow, "Maximum_frequency", maximum_frequency
 		Set numeric value: logRow, "Number_of_formants", number_of_formants
 		Set string value: logRow, "Manipulation_method", manipulation_method$
-		for fmt from 1 to 5
-			if start_with_highest_formant
-				colFmt = 6 - fmt
-			else
-				colFmt = fmt
-			endif
-			if f'colFmt'
-				Set numeric value: logRow, "F'colFmt'_manipulation", f'colFmt'_manip
-			endif
-		endfor
+		Set numeric value: logRow, "F1_manipulation", f1_manip
+		Set numeric value: logRow, "F2_manipulation", f2_manip
+		Set numeric value: logRow, "F3_manipulation", f3_manip
+		Set numeric value: logRow, "F4_manipulation", f4_manip
+		Set numeric value: logRow, "F5_manipulation", f5_manip
 		Set numeric value: logRow, "Manipulation_interval", manipulation_interval
 		Set numeric value: logRow, "Start_with_highest_formant", start_with_highest_formant
 		Set numeric value: logRow, "Minimum_pitch", minimum_pitch
@@ -988,40 +934,98 @@ if write_monitor_to_file$ = "csv"
 	endfor
 endif
 
-##Create, save, and select final versions of objects
+##Create final versions of Sound and TextGrid
 selectObject: manipStim
-finalStim = Copy: origSoundName$ + "_manip"
+finalStim = Copy: origSoundName$
 Scale intensity: output_intensity
 if not keep_intermediary_stimuli
 	removeObject: manipStim
 endif
 selectObject: manipTG
-finalTG = Copy: origTGName$ + "_manip"
+finalTG = Copy: origTGName$
 removeObject: manipTG
+
 ##Save
 if length(filename_prefix$) > 0 or length(filename_suffix$) > 0
 	##Save Sound and TextGrid
-	selectObject: finalStim
-	Save as WAV file: outputSoundFile$
-	selectObject: finalTG
-	Save as text file: outputTGFile$
-	if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
-		appendInfoLine: newline$, "Files saved as 'outputSoundFile$' and 'outputTGFile$'."
+	if saveFiles
+		selectObject: finalStim
+		Save as WAV file: outputSoundFile$
+		selectObject: finalTG
+		Save as text file: outputTGFile$
+		if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
+			appendInfoLine: newline$, "Files saved as 'outputSoundFile$' and 'outputTGFile$'."
+		endif
 	endif
 	
-	##Save logfile
+	##Handle logfile
 	if write_monitor_to_file$ = "csv"
-		selectObject: table
-		Save as comma-separated file: outputLogFile$
-		if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
-			appendInfoLine: "Log file saved as 'outputLogFile$'."
+		outputLogFile$ = filename_prefix$ + origSoundName$ + filename_suffix$ + "_ManipLog.csv"
+		if fileReadable(outputLogFile$)
+			saveLog = 1
+			existingLog = Read Table from comma-separated file: outputLogFile$
+			nColExisting = Get number of columns
+			selectObject: table
+			nColNew = Get number of columns
+			if nColExisting <> nColNew
+				beginPause: "Overwrite log file?"
+					comment: "File 'outputLogFile$' already exists and isn't compatible with the new logfile.'newline$'Do you want to overwrite 'outputLogFile$' with the new logfile?"
+				saveLog = endPause: "Yes", "No", 1
+			else
+				checkCol = 0
+				repeat 
+					checkCol += 1
+					selectObject: existingLog
+					colExisting$[checkCol] = Get column label: checkCol
+					selectObject: table
+					colNew$[checkCol] = Get column label: checkCol
+				until colExisting$[checkCol] <> colNew$[checkCol] or checkCol = nColExisting
+				if colExisting$[checkCol] <> colNew$[checkCol]
+					beginPause: "Overwrite log file?"
+						comment: "File 'outputLogFile$' already exists and isn't compatible with the new logfile.'newline$'Do you want to overwrite 'outputLogFile$' with the new logfile?"
+					saveLog = endPause: "Yes", "No", 1
+				endif
+			endif
+			if saveLog = 1
+				selectObject: table, existingLog
+				appendedLog = Append
+				Rename: "ManipLog"
+				Save as comma-separated file: outputLogFile$
+				if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
+					appendInfoLine: "Log file updated and re-saved as 'outputLogFile$'."
+				endif
+				removeObject: table, existingLog
+			endif
+		else
+			selectObject: table
+			Save as comma-separated file: outputLogFile$
+			if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
+				appendInfoLine: "Log file saved as 'outputLogFile$'."
+			endif
 		endif
+		
+	##Save logfile as txt
 	elsif write_monitor_to_file$ = "txt"
-		appendFile(outputLogFile$, info$())
-		if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
-			appendInfoLine: "Log file saved as 'outputLogFile$'."
+		outputLogFile$ = filename_prefix$ + origSoundName$ + filename_suffix$ + "_ManipLog.txt"
+		if fileReadable(outputLogFile$)
+			beginPause: "Overwrite log file?"
+				comment: "File 'outputLogFile$' already exists.'newline$'Are you sure you want to overwrite?"
+			saveLog = endPause: "Yes", "No", 1
+			
+			if saveLog = 1
+				appendFile(outputLogFile$, info$())
+				if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
+					appendInfoLine: "Log file saved as 'outputLogFile$'."
+				endif
+			endif
+		else 
+			appendFile(outputLogFile$, info$())
+			if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
+				appendInfoLine: "Log file saved as 'outputLogFile$'."
+			endif
 		endif
 	endif
 endif
-##Select
+
+##Select output Sound and TextGrid
 selectObject: finalStim, finalTG
