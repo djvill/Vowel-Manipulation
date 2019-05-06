@@ -1,7 +1,5 @@
 ####
 #### Praat script ManipulateVowelsGetIngredientsProc
-#### Version 1.0a
-#### Version date: December 3, 2017
 #### Dan Villarreal
 ####
 #### Hosts the getIngredients procedure that is utilized by 

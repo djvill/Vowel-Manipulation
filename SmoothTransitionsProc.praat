@@ -1,7 +1,5 @@
 ####
 #### Praat script SmoothTransitionsProc
-#### Version 0.8
-#### Version date: 3/31/15
 #### Dan Villarreal
 ####
 #### Hosts a procedure, smoothTransitions, that smooths (smoothens?)

@@ -6,12 +6,10 @@
 #### by specified F1, F2, F3, F4, and/or F5 differences. It iterates formant
 #### increases by small formant steps (manipulation intervals, which work well
 #### as JNDs) specified by the user. This interval approach drastically improves
-#### accuracy of the manipulation process, relative to doing the manipulation all at once. It also necessitates doing
-#### the manipulation formant-by-formant rather than all at once.
-####
-#### Improves upon an earlier version by iterating the manipulation
-#### of just the filter (i.e., the Formant object) rather than both 
-#### the source and the filter.
+#### accuracy of the manipulation process, relative to doing the manipulation 
+#### all at once. This interval approach also necessitates doing the manipulation 
+#### formant-by-formant rather than all at once; this can be done starting with
+#### the lowest or highest formant.
 ####
 
 include ManipulateVowelsGetIngredientsProc.praat

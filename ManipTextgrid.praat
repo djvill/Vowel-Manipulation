@@ -2,18 +2,13 @@
 #### Praat script ManipTextgrid
 #### Dan Villarreal
 ####
-#### Reads TokenMeasurements.csv to determine how to manipulate 
-#### vowels in Sound files to two guises based on user-specified parameters. 
-#### Forthe purposes of this script, a token is defined as a vowel
-#### plus any preceding and/or following sonorant (except /r/) 
-#### within the same word; the script manipulates the formants for
-#### the entire token but defines formant targets relative to just
-#### the vowel. (Users may ignore this behavior by using identical
-#### timing values for the token and vowel in the csv file.) Also
-#### adds columns to the csv file with info on the manipulation.
+#### This script takes a selected Sound & TextGrid and manipulates
+#### certain intervals of the Sound based on user-specified parameters.
+#### Optionally, the script can save the manipulated Sound (and TextGrid, if
+#### the timing has changed), as well as data on the manipulation.
 ####
 
-##TODO: rewrite header, option to save monitor to text file, option to save monitor to TextGrid, condense pause windows (perhaps formants to manipulate could be less verbose, like a single text field)
+##TODO: option to save monitor to text file, option to save monitor to TextGrid, condense pause windows (perhaps formants to manipulate could be less verbose, like a single text field)
 
 stopwatch
 
@@ -69,7 +64,7 @@ output_intensity = 65
 time_step = 0.005
 ##maximum_intensity: Maximum intensity for intensity cloning
 maximum_intensity = 100
-##monitor: Print information on tokens? ("verbose", "succinct","none")
+##monitor: Print information on tokens? ("verbose", "succinct", "none")
 # monitor = 1
 print_information_on_tokens$ = "verbose"
 ##token_information_output: Filename for csv output of token information (blank for no save)
