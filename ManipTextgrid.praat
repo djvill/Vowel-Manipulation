@@ -8,11 +8,9 @@
 #### the timing has changed), as well as data on the manipulation.
 ####
 
-##TODO: option to save monitor to text file, option to save monitor to TextGrid, condense pause windows (perhaps formants to manipulate could be less verbose, like a single text field)
-
 stopwatch
 
-selectObject: 1, 2
+# selectObject: 1, 2
 
 include ManipToken.praat
 include SmoothTransitionsProc.praat
@@ -64,16 +62,14 @@ output_intensity = 65
 time_step = 0.005
 ##maximum_intensity: Maximum intensity for intensity cloning
 maximum_intensity = 100
-##monitor: Print information on tokens? ("verbose", "succinct", "none")
-# monitor = 1
+##print_information_on_tokens$: Print information on tokens? ("verbose", "succinct", "none")
 print_information_on_tokens$ = "verbose"
-##token_information_output: Filename for csv output of token information (blank for no save)
-##Will need to validate file extension
-token_information_output$ = "" 
 ##keep_individual_tokens: Keep individual tokens in Praat Objects list?
 keep_individual_tokens = 0
 ##keep_intermediary_stimuli: Keep intermediary stimuli in Praat Objects list?
 keep_intermediary_stimuli = 0
+##write_monitor_to_file$: Write monitor to file? ("csv", "txt", "none")
+write_monitor_to_file$ = "csv"
 ##filename_prefix and filename_suffix: Add these to save files (leave both blank to not save sound and TextGrid); prefix may have subdirectories that will be created if they don't exist
 filename_prefix$ = ""
 filename_suffix$ = ""
@@ -97,9 +93,13 @@ if clicked = 2
 			option: "None"
 		boolean: "Keep individual tokens (in Objects list)", 0
 		boolean: "Keep intermediary stimuli (in Objects list)", 0
-		comment: "Save filename affixes (leave both blank to not save sound and TextGrid)"
+		comment: "Save filename affixes (to skip saving, leave both blank)"
 		sentence: "Filename prefix (including subdirectory)", ""
 		sentence: "Filename suffix", ""
+		optionMenu: "Write monitor to file", 1
+			option: "csv"
+			option: "txt"
+			option: "none"
 	endPause: "Continue", 1
 endif
 print_information_on_tokens$ = replace_regex$(print_information_on_tokens$, "^([A-Za-z]+) .*", "\1", 0)
@@ -121,8 +121,9 @@ if prefLen > 0
 	endwhile
 endif
 
-##Get full filenames, and warn the user if files already existence
+##If saving, get full filenames (and warn the user if files already exist)
 if prefLen > 0 or length(filename_suffix$) > 0
+	##Handle Sound and TextGrid
 	outputSoundFile$ = filename_prefix$ + origSoundName$ + filename_suffix$ + ".wav"
 	outputTGFile$ = filename_prefix$ + origTGName$ + filename_suffix$ + ".textgrid"
 	if fileReadable(outputSoundFile$) and not fileReadable(outputTGFile$)
@@ -137,6 +138,23 @@ if prefLen > 0 or length(filename_suffix$) > 0
 		beginPause: "Overwrite files?"
 			comment: "Files 'outputSoundFile$' and 'outputTGFile$' already exist. Are you sure you want to overwrite?"
 		endPause: "Yes", 1
+	endif
+	
+	##Handle logfile
+	if write_monitor_to_file$ = "csv"
+		outputLogFile$ = filename_prefix$ + origSoundName$ + filename_suffix$ + "_ManipLog.csv"
+		if fileReadable(outputLogFile$)
+			beginPause: "Overwrite log file?"
+				comment: "File 'outputLogFile$' already exists. Are you sure you want to overwrite?"
+			endPause: "Yes", 1
+		endif
+	elsif write_monitor_to_file$ = "txt"
+		outputLogFile$ = filename_prefix$ + origSoundName$ + filename_suffix$ + "_ManipLog.txt"
+		if fileReadable(outputLogFile$)
+			beginPause: "Overwrite log file?"
+				comment: "File 'outputLogFile$' already exists. Are you sure you want to overwrite?"
+			endPause: "Yes", 1
+		endif
 	endif
 endif
 
@@ -169,6 +187,7 @@ f3_manip = undefined
 f4_manip = undefined
 f5_manip = undefined
 
+##Bring up another pause window (which is defined by manipulation method and formants)
 if manipulation_method$ = "relative"
 	if f1
 		if f2
@@ -645,6 +664,7 @@ elsif manipulation_method$ = "absolute"
 	endif
 endif
 
+##Set manipulation values to feed to manipulateToken
 if manipulation_method$ = "relative"
 	for fmt from 1 to 5
 		if f'fmt'
@@ -686,6 +706,47 @@ if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "s
 	appendInfoLine: ""
 endif
 
+##If outputting info to csv, set up table columns
+if write_monitor_to_file$ = "csv"
+	##Basic settings
+	table = Create Table with column names: "ManipLog", 1, "Sound TextGrid Segment_tier Manipulation_label Maximum_frequency Number_of_formants Manipulation_method"
+	##Manipulation values, depending on which formants were manipulated
+	for fmt from 1 to 5
+		if start_with_highest_formant
+			colFmt = 6 - fmt
+		else
+			colFmt = fmt
+		endif
+		if f'colFmt'
+			Append column: "F" + string$(colFmt) + "_manipulation"
+		endif
+	endfor
+	##Other basic settings
+	Append column: "Manipulation_interval"
+	Append column: "Start_with_highest_formant"
+	Append column: "Minimum_pitch"
+	##Advanced settings
+	Append column: "Measurement_point"
+	Append column: "Time_buffer"
+	Append column: "Output_intensity"
+	Append column: "Time_step"
+	Append column: "Maximum_intensity"
+	Append column: "Smoothing_window"
+	##Output data
+	Append column: "Token_number"
+	Append column: "Token_label"
+	Append column: "Token_start"
+	Append column: "Token_end"
+	Append column: "Formant"
+	Append column: "Manipulation_steps"
+	Append column: "Original"
+	Append column: "Final"
+	Append column: "Overall_manipulation_size"
+	Append column: "Manipulation_target"
+	Append column: "Manipulation_off-target"
+	Append column: "Processing_time"
+endif
+
 ##Create versions of origStim and origTG to be manipulated
 selectObject: origStim
 Shift times to: "start time", 0
@@ -700,9 +761,12 @@ adjustStart = 0
 
 ##Counter, timer
 tokenCt = 0
+if write_monitor_to_file$ = "csv"
+	currentRow = 0
+endif
 initTime = stopwatch
 
-##Manipulation loop
+##Manipulation loop: Loop over intervals in segment_tier
 for phone from 1 to numPhones
 	selectObject: manipTG
 	phoneLabel$ = Get label of interval: segment_tier, phone
@@ -758,8 +822,37 @@ for phone from 1 to numPhones
 			appendInfoLine: newline$, "Token #'tokenCt' (label ""'phoneLabel$'"")"
 		endif
 		
-		##Extract and manipulate token, formant by formant
+		##Manipulate token, formant by formant
 		@manipulateToken: oldToken, maximum_frequency, number_of_formants, manipulation_method$, f1_manip, f2_manip, f3_manip, f4_manip, f5_manip, start_with_highest_formant, measurement_point, manipulation_interval, time_buffer, minimum_pitch, time_step, maximum_intensity, print_information_on_tokens$
+		##Add details on final manip to monitor table
+		if write_monitor_to_file$ = "csv"
+			selectObject: table
+			for fmt from 1 to 5
+				if start_with_highest_formant
+					manipFmt = 6 - fmt
+				else
+					manipFmt = fmt
+				endif
+				
+				if f'manipFmt'
+					currentRow += 1
+					Set numeric value: currentRow, "Token_number", tokenCt
+					Set string value: currentRow, "Token_label", phoneLabel$
+					Set numeric value: currentRow, "Token_start", phoneStart
+					Set numeric value: currentRow, "Token_end", phoneEnd
+					Set numeric value: currentRow, "Formant", manipFmt
+					Set numeric value: currentRow, "Manipulation_steps", manipCtFmt[manipFmt]
+					Set numeric value: currentRow, "Original", origF'manipFmt'
+					Set numeric value: currentRow, "Final", newF'manipFmt'
+					Set numeric value: currentRow, "Overall_manipulation_size", newF'manipFmt'-origF'manipFmt'
+					Set numeric value: currentRow, "Manipulation_target", desired_F'manipFmt'
+					Set numeric value: currentRow, "Manipulation_off-target", desired_F'manipFmt'-newF'manipFmt'
+					Append row
+				endif
+			endfor
+		endif
+		
+		##Remove buffer from manipulated token and scale to loudnessNarrow
 		selectObject: token[manipCt]
 		newToken = Extract part: phoneStart, phoneEnd, "rectangular", 1.0, "yes"
 		Scale intensity: loudnessNarrow
@@ -796,7 +889,8 @@ for phone from 1 to numPhones
 		##Smooth formant transitions
 		##	N.B. This makes a few assumptions, namely that all manipulated formants
 		##	at both the left and right edges need to be smoothed. This might be too
-		##	much manipulation, so take care with this.
+		##	much manipulation, so it might be safer to disable smoothing by setting
+		##	smoothing_window to 0
 		if smoothing_window > 0
 			if print_information_on_tokens$ = "verbose"
 				appendInfo: "Smoothing transitions for: "
@@ -853,9 +947,45 @@ endfor
 
 manipTime = stopwatch
 
+##Print timing information
 if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
 	appendInfoLine: newline$, "Initialization:", tab$, fixed$(initTime,3), "s"
 	appendInfoLine: "Manipulation:", tab$, fixed$(manipTime,3), "s"
+endif
+
+##Fill in monitor table with batch-wide information
+if write_monitor_to_file$ = "csv"
+	selectObject: table
+	Remove row: currentRow + 1
+	for logRow from 1 to currentRow
+		Set string value: logRow, "Sound", origSoundName$
+		Set string value: logRow, "TextGrid", origTGName$
+		Set numeric value: logRow, "Segment_tier", segment_tier
+		Set string value: logRow, "Manipulation_label", manipulation_label$
+		Set numeric value: logRow, "Maximum_frequency", maximum_frequency
+		Set numeric value: logRow, "Number_of_formants", number_of_formants
+		Set string value: logRow, "Manipulation_method", manipulation_method$
+		for fmt from 1 to 5
+			if start_with_highest_formant
+				colFmt = 6 - fmt
+			else
+				colFmt = fmt
+			endif
+			if f'colFmt'
+				Set numeric value: logRow, "F'colFmt'_manipulation", f'colFmt'_manip
+			endif
+		endfor
+		Set numeric value: logRow, "Manipulation_interval", manipulation_interval
+		Set numeric value: logRow, "Start_with_highest_formant", start_with_highest_formant
+		Set numeric value: logRow, "Minimum_pitch", minimum_pitch
+		Set numeric value: logRow, "Measurement_point", measurement_point
+		Set numeric value: logRow, "Time_buffer", time_buffer
+		Set numeric value: logRow, "Output_intensity", output_intensity
+		Set numeric value: logRow, "Time_step", time_step
+		Set numeric value: logRow, "Maximum_intensity", maximum_intensity
+		Set numeric value: logRow, "Smoothing_window", smoothing_window
+		Set numeric value: logRow, "Processing_time", manipTime
+	endfor
 endif
 
 ##Create, save, and select final versions of objects
@@ -870,12 +1000,27 @@ finalTG = Copy: origTGName$ + "_manip"
 removeObject: manipTG
 ##Save
 if length(filename_prefix$) > 0 or length(filename_suffix$) > 0
+	##Save Sound and TextGrid
 	selectObject: finalStim
 	Save as WAV file: outputSoundFile$
 	selectObject: finalTG
 	Save as text file: outputTGFile$
 	if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
 		appendInfoLine: newline$, "Files saved as 'outputSoundFile$' and 'outputTGFile$'."
+	endif
+	
+	##Save logfile
+	if write_monitor_to_file$ = "csv"
+		selectObject: table
+		Save as comma-separated file: outputLogFile$
+		if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
+			appendInfoLine: "Log file saved as 'outputLogFile$'."
+		endif
+	elsif write_monitor_to_file$ = "txt"
+		appendFile(outputLogFile$, info$())
+		if print_information_on_tokens$ = "verbose" or print_information_on_tokens$ = "succinct"
+			appendInfoLine: "Log file saved as 'outputLogFile$'."
+		endif
 	endif
 endif
 ##Select

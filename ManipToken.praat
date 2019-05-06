@@ -111,11 +111,17 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1_manip, f2
 			selectObject: newToken
 			formant = To Formant (burg): 0, numForms, maxFreq, 0.025, 50
 			newF'manipFmt'[manipCt] = Get value at time: manipFmt, vowelMeasPoint, "Hertz", "Linear"
+			remainingIncr = desired_F'manipFmt' - newF'manipFmt'[manipCt]
+			if print_information_on_tokens$ = "verbose"
+				appendInfoLine: manipFmt, tab$, manipCtFmt[manipFmt], tab$, fixed$(newF'manipFmt'[manipCt],2), tab$, fixed$(desired_F'manipFmt',2), tab$, fixed$(remainingIncr,2), tab$, fixed$(manipulation_interval,2)
+			endif
 			##In case the latest version of the vowel is actually further off-target
 			##than the previous version, discard the latest version in favor of the
 			##penultimate version.
+			
+			
 			removeObject: formant, sourceFilter
-			if abs(desired_F'manipFmt' - newF'manipFmt'[manipCt]) > remainingIncr
+			if abs(desired_F'manipFmt' - newF'manipFmt'[manipCt]) > abs(desired_F'manipFmt' - newF'manipFmt'[manipCt-1])
 				k = manipCt-1
 				token[manipCt] = token[k]
 				if newToken <> oldToken
@@ -178,5 +184,8 @@ procedure manipulateToken: oldToken, maxFreq, numForms, manipType$, f1_manip, f2
 			endif
 		endfor
 	endif
+	
+	
+	
 	removeObject: newFormantObj
 endproc
