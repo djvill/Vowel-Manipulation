@@ -1,8 +1,8 @@
 # Vowel-Manipulation (`textgrid-ui` branch)
 
-Dan Villarreal (New Zealand Institute of Language, Brain, and Behaviour)
+Dan Villarreal (University of Pittsburgh)
 
-daniel.villarreal@canterbury.ac.nz | https://canterbury-nz.academia.edu/DanVillarreal | https://www.researchgate.net/profile/Dan_Villarreal
+d.vill@pitt.edu | https://www.researchgate.net/profile/Dan_Villarreal
 
 
 This repository contains files useful for replicating the vowel manipulation methods used in my [2016 dissertation](https://www.academia.edu/30182487). If citing these scripts, please cite my [2018 *Journal of English Linguistics* article](http://journals.sagepub.com/doi/full/10.1177/0075424217753520): Villarreal, Dan. 2018. The construction of social meaning: A matched-guise investigation of the California Vowel Shift. *Journal of English Linguistics* 46.1.52-78. doi:10.1177/0075424217753520
