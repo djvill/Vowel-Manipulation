@@ -17,4 +17,4 @@ Not present here but also necessary for running the script are **sounds** and **
 - In Stim5, Stim18, and Stim24, the first manipulated token starts at the left edge of the stimulus; since the manipulation process requires a 50ms buffer on each side of the token (due to how Praat finds formant tracks), the timings need to be adjusted for all of the following tokens in these stimuli. The script automatically handles this situation by adjusting these timings, but you can set the second column of `TokenMeasurements.csv` to all `0`s to see what happens when start times aren’t adjusted.
 - In addition, Figure 3 from the JEngL article comes from Stim5, so readers can replicate the results shown in Figure 3 themselves.
 
-Finally, if there's anything that can be made clearer about the scripts and how they operate, please don't hesitate to email me at daniel.villarreal@canterbury.ac.nz.
+Finally, if there's anything that can be made clearer about the scripts and how they operate, please don't hesitate to email me at d.vill@pitt.edu.
